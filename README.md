@@ -18,3 +18,33 @@ My personal to-do list:
 - An open source hardware design using the LB-LINK module, then share it somewhere else -- done, see [here](https://oshwhub.com/libc0607/bl-m8812eu2-demoboard-v1p0)  
 
 PRs welcome.
+
+## Increasing TX Power in Monitor Mode How-To  
+Tested on my Ubuntu 22.04 VM, kernel 6.5   
+  
+The relative TX gain under different settings was measured by my HackRF with the same gain setting and several cascaded attenuators.   
+The results do tell the difference. However, I don't have a spectrum analyzer, so I don't know the absolute TX power value.   
+
+Be careful when you try these cmds as the adaptor can be VERY HOT. Use a good heat sink and install the antennas properly.
+```
+# load the driver
+sudo modprobe cfg80211
+sudo insmod 8812eu.ko rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+
+# set monitor mode 
+sudo airmon-ng check kill
+sudo airmon-ng start wlan0
+
+# set channel 
+sudo ifconfig wlan0 down
+sudo iwconfig wlan0 mode monitor channel 161
+sudo ifconfig wlan0 up
+
+# Set tx power in mbm, the range is 0~3174
+# On my BL-M8812EU2 module, the real TX power measured by HackRF increased accordingly when increasing the mbm value
+# e.g. when mbm increases by 500, the signal strength seen by HackRF increases by +5dB
+# but when mbm is higher than ~2000 (may different), the PA starts to saturate and the increase becomes smaller
+sudo iw dev wlan0 set txpower fixed 0
+sudo iw dev wlan0 set txpower fixed 3174 
+```
+
