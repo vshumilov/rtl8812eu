@@ -12579,7 +12579,7 @@ static iw_handler rtw_private_handler[] = {
 	rtw_test,						/* 0x1D */
 };
 
-#if defined(CONFIG_WIRELESS_EXT) && !defined(CONFIG_CFG80211_WEXT)
+#ifdef CONFIG_WIRELESS_EXT
 #if WIRELESS_EXT >= 17
 static struct iw_statistics *rtw_get_wireless_stats(struct net_device *dev)
 {
