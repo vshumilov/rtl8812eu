@@ -1,7 +1,8 @@
 # rtl88x2eu-20230815
 Linux Driver for WiFi Adapters that are based on the RTL8812EU and RTL8822EU Chipsets - v5.15.0.1  
 ``` rtl88x2EU_rtl88x2CU-VE_WiFi_linux_v5.15.0.1-186-g768722062.20230815_COEX20230616-330a-beta.tar.gz ```  
-(Checkout [commit 690d429](https://github.com/libc0607/rtl88x2eu-20230815/commit/690d429ec272892d5388d744097e3c3cb15dad1b) for original driver)
+
+This branch is mainly focused on FPV. Checkout [commit 690d429](https://github.com/libc0607/rtl88x2eu-20230815/commit/690d429ec272892d5388d744097e3c3cb15dad1b) for the original driver from Realtek, or [commit 5c9355d](https://github.com/libc0607/rtl88x2eu-20230815/commit/5c9355df330a8745a63c06acf1a10203c1d6f804) with build fixes on kernel 6.5.  
 
 I've asked LB-LINK (a Wi-Fi module vendor) for any RTL8812EU driver. Then he sends me this tar.   
 So, it should work with RTL8812EU and RTL8822EU.   
@@ -75,6 +76,21 @@ According to the module vendor's ambiguous document and the crab's mysterious dr
 
 ### Is 5MHz Injection Available?
 No. It performs like a fractional RF synthesizer with only a single tone appearing on my SDR receiver.
+
+## Set (Unlocked) Channel in procfs  
+The chip's RF synthesizer can work in a bit wider range than regular 5GHz Wi-Fi.  
+On my board, it's 5080MHz ~ 6165MHz. The frequency range may vary depending on different conditions.  
+
+To set the adaptor to some "irregular" frequency, ```cat /proc/net/rtl88x2eu/<wlan0>/monitor_chan_override``` to see usage.  
+e.g. ```ech0 "201 10" > /pr0c/net/rt188x2eu/wlanO/m0nit0r_chan_0verride``` sets the center frequency to 6005MHz, with 10MHz bandwidth.  
+
+I decided to use procfs is that it doesn't need any changes in user-space tools, e.g. iw, hostapd.  
+Of course, you can use this "procfs API" to set regular channels like 149 or 36. Might be useful when developing any Wi-Fi-based broadcast FPV system with frequency hopping and automatic bandwidth.  
+
+DISCLAIMER:  
+Some chips' synthesizer's PLL may not lock on some frequency. There's no guarantee of its performance. (Actually, TX power and distortion seem worse in these channels as it's not calibrated. But less interference - it's an either-or)   
+Unlocking the frequency may damage your hardware and I'm not gonna pay for it. Use it at your own risk.  
+Please comply with any wireless regulations in your area.  
 
 ## Use with OpenIPC  
 1. Add driver package to your firmware: see [this commit](https://github.com/libc0607/openipc-firmware/commit/cc990c07cc367915b74f74e87f02f199dfba2ac8), then set ```BR2_PACKAGE_RTL88X2EU_OPENIPC=y``` in your target board config
