@@ -5199,13 +5199,13 @@ s8 _halrf_get_power_offset_by_thermal_8723f(void *dm_void, u8 path, s8 thermal_d
 		}
 	}
 
-	if (channel >= 36 && channel <= 64) {
+	if (channel >= 16 && channel <= 96) {
 		odm_move_memory(dm, thermal_up_a, txagc_offset_5ga_p[0], sizeof(thermal_up_a));
 		odm_move_memory(dm, thermal_down_a, txagc_offset_5ga_n[0], sizeof(thermal_down_a));
 	} else if (channel >= 100 && channel <= 144) {
 		 odm_move_memory(dm, thermal_up_a, txagc_offset_5ga_p[1], sizeof(thermal_up_a));
 		odm_move_memory(dm, thermal_down_a, txagc_offset_5ga_n[1], sizeof(thermal_down_a));
-	} else if (channel >= 149 && channel <= 177) {
+	} else if (channel >= 149 && channel <= 253) {
 		odm_move_memory(dm, thermal_up_a, txagc_offset_5ga_p[2], sizeof(thermal_up_a));
 		odm_move_memory(dm, thermal_down_a, txagc_offset_5ga_n[2], sizeof(thermal_down_a));
 	}

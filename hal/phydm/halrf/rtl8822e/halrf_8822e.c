@@ -162,7 +162,7 @@ void get_delta_swing_table_8822e(void *dm_void,
 			*temperature_up_b = cali_info->delta_swing_table_idx_2gb_p;
 			*temperature_down_b = cali_info->delta_swing_table_idx_2gb_n;
 		}
-	} else if (channel >= 36 && channel <= 64) {
+	} else if (channel >= 16 && channel <= 96) {
 		*temperature_up_a = cali_info->delta_swing_table_idx_5ga_p[0];
 		*temperature_down_a = cali_info->delta_swing_table_idx_5ga_n[0];
 		*temperature_up_b = cali_info->delta_swing_table_idx_5gb_p[0];
