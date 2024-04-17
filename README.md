@@ -10,8 +10,8 @@ According to the file name, it may work with RTL8812CU or RTL8822CU (if exists).
 
 My personal to-do list: 
 - Figure out how to make the packet injection work correctly (idk if I'm doing it correctly -- needs help) -- generally, it works! but it's not been fully tested and idk how many bugs it has (
-- Test with any OpenIPC camera -- It was reported working on SSC338/Hi3516
-- Figure out how to transmit in 5M/10M bandwidth (The feature is claimed to be supported in the module's product page. see [CONFIG_NARROWBAND_SUPPORTING](https://github.com/search?q=repo%3Alibc0607%2Frtl88x2eu-20230815+CONFIG_NARROWBAND_SUPPORTING&type=code) and [hal8822e_fw_10M.c](https://github.com/libc0607/rtl88x2eu-20230815/blob/v5.15.0.1/hal/rtl8822e/hal8822e_fw_10M.c))
+- Test with any OpenIPC camera -- It was reported working on SSC338Q/SSC30KQ and Hi3516/GK7205 (with CONFIG_WIRELESS_EXT enabled)
+- Figure out how to transmit in 5M/10M bandwidth (The feature is claimed to be supported in the module's product page. see [CONFIG_NARROWBAND_SUPPORTING](https://github.com/search?q=repo%3Alibc0607%2Frtl88x2eu-20230815+CONFIG_NARROWBAND_SUPPORTING&type=code) and [hal8822e_fw_10M.c](https://github.com/libc0607/rtl88x2eu-20230815/blob/v5.15.0.1/hal/rtl8822e/hal8822e_fw_10M.c)) -- Only 10MHz bandwidth works well in injection mode
 - Build with dkms
 - Test on more architecture, kernels, and distributions
 - An open-source hardware design using the LB-LINK module, then share it somewhere else -- done, see [here](https://oshwhub.com/libc0607/bl-m8812eu2-demoboard-v1p0)  
@@ -42,6 +42,39 @@ sudo insmod 8812eu.ko rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 sudo iw dev wlan0 set txpower fixed <mBm>
 ```
 Tested on my Ubuntu 22.04 VM, kernel 6.5.   
+
+## 10MHz Bandwidth Transmission
+See the RF spectrum visualized [here](https://www.youtube.com/watch?v=EUj-wSgoY_E) on YouTube  
+
+There's a lot to explore in this crab driver and will update here if something new has been discovered.  
+Please open an issue if you find anything interesting.  
+
+So, according to the module vendor's document and my test using a HackRF, that's all I know:   
+
+### Injection
+To transmit packets in monitor mode using packet injection, set ```iw <wlan> set channel <same_channel> 10MHz``` on both air & ground.  
+Then when transmitting in 20MHz bandwidth (e.g. bandwidth=20 in wfb_ng), the packet is actually transmitted in 10MHz bandwidth, which seems like being achieved by simply underclocking the baseband.  
+It's the same on the receiver side, though in which the radiotap header in received packets still indicates a 20MHz bandwidth. 
+
+But when ```iw``` says ```Devices or Resources Busy (-16)```, check ```iw <wlan> info``` if the ```iw``` recognized the adaptor is in monitor mode.   
+If not, ```iw <wlan> set monitor```, then try setting 10MHz again.  
+
+That's because:  
+1. The crab driver supports both WEXT and cfg80211 APIs, but it seems that it's not that robust and there's some conflicts exist
+2. the cfg80211 API checks [here](https://github.com/OpenIPC/linux/blob/eb50a943c26845925ff11ccb1651c40fa02c105e/net/wireless/chan.c#L862) if there's any other interface is not in monitor mode
+3. If the monitor mode is set by ```iwconfig```, the process is done by calling the old WEXT APIs, so the cfg80211-based ```iw``` may not get the latest status and think the interface is still in managed mode
+
+### AP/STA
+Note that it has NOT BEEN TESTED.  
+According to the module vendor's ambiguous document and the crab's mysterious driver tar with a "_10MHz" suffix:  
+1. Enable ```CONFIG_NARROWBAND_SUPPORTING``` in ```include/hal_ic_cfg.h``` (in ```#ifdef CONFIG_RTL8822E``` section if using RTL8812EU), then ```#define CONFIG_NB_VALUE RTW_NB_CONFIG_WIDTH_10``` below
+2. Rename ```hal/rtl8822e/hal8822e_fw_10M.*``` into ```hal/rtl8822e/hal8822e_fw.*``` to replace the original firmware
+3. Now you get the "<tar_name>_10MHz" driver. Rebuild the driver
+4. (Should we set it to 10MHz bandwidth, Mr. Crab?)
+5. If there are any tools complain about the Wi-Fi regularities when setting up a 10MHz AP,  try setting the channel plan manually by ```echo 0x3E > /proc/net/rtl88x2eu/<wlan>/chan_plan```.
+
+### Is 5MHz Injection Available?
+No. It performs like a fractional RF synthesizer with only a single tone appearing on my SDR receiver.
 
 ## Use with OpenIPC  
 1. Add driver package to your firmware: see [this commit](https://github.com/libc0607/openipc-firmware/commit/cc990c07cc367915b74f74e87f02f199dfba2ac8), then set ```BR2_PACKAGE_RTL88X2EU_OPENIPC=y``` in your target board config
