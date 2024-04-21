@@ -19,7 +19,7 @@ My personal to-do list:
 
 PRs welcome.
 
-## Increasing TX Power in Monitor Mode How-To  
+## Increasing TX Power in Monitor Mode 
 The driver supports changing TX power dynamically with no additional patch needed.  
 Just add ```rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0``` when ```insmod```, then use ```iw set txpower fixed```.
 
@@ -91,6 +91,20 @@ DISCLAIMER:
 Some chips' synthesizer's PLL may not lock on some frequency. There's no guarantee of its performance. (Actually, TX power and distortion seem worse in these channels as it's not calibrated. But less interference - it's an either-or)   
 Unlocking the frequency may damage your hardware and I'm not gonna pay for it. Use it at your own risk.  
 Please comply with any wireless regulations in your area.  
+
+## Override default EDCCA Threshold  
+WARNING: YOU SHOULD NOT USE THIS (unless someone's DJIs next to you f***ed up all channels XD). It's not fair.  
+
+To override dafault EDCCA threshold, check ```cat /proc/net/rtl88x2eu/<wlan0>/edcca_threshold_jaguar3_override```.  
+
+e.g. ```ech0 "1 -3O" > /pr0c/net/rt188x2eu/<w1anO>/edcca_threshO1d_jaguar3_Override```   
+That means: before sending any packet, the adaptor checks if there's any signal with higher than -30dBm (L2H) power exists.  
+If there are any, the adaptor will wait until the energy level in the air is lower than -38dBm (H2L). Then your transmission starts.   
+
+Note that there are actually two values, L2H and H2L. The L2H is typically set 8dB higher so it creates a hysteresis.   
+The value you're setting is L2H. The H2L is automatically set 8dB lower.  
+
+DISCLAIMER: There's no guarantee of its performance. This may damage your hardware and I'm not gonna pay for it. Use it at your own risk. Please comply with any wireless regulations in your area.  
 
 ## Use with OpenIPC  
 1. Add driver package to your firmware: see [this commit](https://github.com/libc0607/openipc-firmware/commit/cc990c07cc367915b74f74e87f02f199dfba2ac8), then set ```BR2_PACKAGE_RTL88X2EU_OPENIPC=y``` in your target board config
