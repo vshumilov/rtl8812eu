@@ -107,8 +107,5 @@ The value you're setting is L2H. The H2L is automatically set 8dB lower.
 DISCLAIMER: There's no guarantee of its performance. This may damage your hardware and I'm not gonna pay for it. Use it at your own risk. Please comply with any wireless regulations in your area.  
 
 ## Use with OpenIPC  
-1. Add driver package to your firmware: see [this commit](https://github.com/libc0607/openipc-firmware/commit/cc990c07cc367915b74f74e87f02f199dfba2ac8), then set ```BR2_PACKAGE_RTL88X2EU_OPENIPC=y``` in your target board config
-2. Edit [package/wifibroadcast](https://github.com/libc0607/openipc-firmware/blob/master/general/package/wifibroadcast/files/wifibroadcast) to support driver loading on boot 
-3. Make sure ```CONFIG_WIRELESS_EXT``` is enabled in your board's kernel config (Thanks to ```邮递员派克 (953271800)``` from QQ group)
-
+See the tutorial [here in OpenIPC Wiki](https://github.com/OpenIPC/wiki/blob/master/en/fpv-bl-m8812eu2-wifi-adaptors.md).   
 
