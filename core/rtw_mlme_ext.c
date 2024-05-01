@@ -9478,10 +9478,16 @@ void issue_action_SA_Query(_adapter *padapter, unsigned char *raddr, unsigned ch
 	struct sta_priv		*pstapriv = &padapter->stapriv;
 	struct registry_priv		*pregpriv = &padapter->registrypriv;
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
+	struct pwrctrl_priv *pwrpriv = adapter_to_pwrctl(padapter);
 
 	if (adapter_is_tx_blocked_by_ch_waiting(padapter))
 		return;
-
+		
+	if (pwrpriv->bInSuspend == _TRUE) {
+		RTW_INFO("DBG_TX_DROP_FRAME %s in suspend flow\n", __FUNCTION__);
+		return;
+	}
+	
 	RTW_INFO("%s, %04x\n", __FUNCTION__, tid);
 
 	pmgntframe = alloc_mgtxmitframe(pxmitpriv);
@@ -9528,6 +9534,12 @@ void issue_action_SA_Query(_adapter *padapter, unsigned char *raddr, unsigned ch
 			psta = rtw_get_stainfo(pstapriv, pwlanhdr->addr1);
 			if (psta != NULL) {
 				/* RTW_INFO("%s, %d, set dot11w_expire_timer\n", __func__, __LINE__); */
+				if (_check_timer_is_active(&psta->dot11w_expire_timer)){
+					/* The timer is active, do not set it again */
+					rtw_free_xmitbuf(&padapter->xmitpriv, pmgntframe->pxmitbuf);
+					rtw_free_xmitframe(&padapter->xmitpriv, pmgntframe);
+					return;
+				}
 				_set_timer(&psta->dot11w_expire_timer, 1000);
 			}
 		}
@@ -9908,21 +9920,21 @@ exit:
 void issue_action_BSSCoexistPacket(_adapter *padapter)
 {
 	_irqL	irqL;
-	_list		*plist, *phead;
+	_list		*plist = NULL, *phead = NULL;
 	unsigned char category, action;
-	struct xmit_frame			*pmgntframe;
-	struct pkt_attrib			*pattrib;
-	unsigned char				*pframe;
-	struct rtw_ieee80211_hdr	*pwlanhdr;
-	unsigned short			*fctrl;
-	struct	wlan_network	*pnetwork = NULL;
+	struct xmit_frame		*pmgntframe = NULL;
+	struct pkt_attrib		*pattrib = NULL;
+	unsigned char			*pframe = NULL;
+	struct rtw_ieee80211_hdr	*pwlanhdr = NULL;
+	unsigned short			*fctrl = NULL;
+	struct	wlan_network		*pnetwork = NULL;
 	struct xmit_priv			*pxmitpriv = &(padapter->xmitpriv);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
 	_queue		*queue	= &(pmlmepriv->scanned_queue);
 	u8 InfoContent[16] = {0};
-	u8 *ICS[8], i;
+	u8 *ICS[8], i = 0;
 #ifdef CONFIG_80211N_HT
 	if ((pmlmepriv->num_FortyMHzIntolerant == 0) && (pmlmepriv->num_sta_no_ht == 0))
 		return;
@@ -9986,11 +9998,7 @@ void issue_action_BSSCoexistPacket(_adapter *padapter)
 		pframe = rtw_set_ie(pframe, EID_BSSCoexistence,  1, &iedata, &(pattrib->pktlen));
 	}
 
-	/*  */
-	_rtw_memset(ICS, 0, sizeof(ICS));
 	if (pmlmepriv->num_sta_no_ht > 0) {
-		int i;
-
 		_enter_critical_bh(&(pmlmepriv->scanned_queue.lock), &irqL);
 
 		phead = get_list_head(queue);

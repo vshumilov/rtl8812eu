@@ -155,9 +155,11 @@
 
 /*
  * MLD related linux kernel patch in
- * Android Common Kernel android13-5.15(5.15.41)
+ * Android Common Kernel android13-5.15
+ * refs/heads/common-android13-5.15-2023-04 (5.15.94)
+ * refs/heads/android13-5.15-lts (5.15.106)
  */
-#if (defined(__ANDROID_COMMON_KERNEL__) && (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 41)))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 94) )
         #define CONFIG_MLD_KERNEL_PATCH
 #endif
 
@@ -389,6 +391,11 @@ __inline static void _init_timer(_timer *ptimer, _nic_hdl nic_hdl, void *pfunc, 
 	ptimer->timer.data = (unsigned long)ptimer;
 	init_timer(&ptimer->timer);
 #endif
+}
+
+__inline static int _check_timer_is_active(_timer *ptimer)
+{
+	return timer_pending(&ptimer->timer);
 }
 
 __inline static void _set_timer(_timer *ptimer, u32 delay_time)

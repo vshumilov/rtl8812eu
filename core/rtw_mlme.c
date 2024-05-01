@@ -4839,8 +4839,7 @@ sint rtw_restruct_sec_ie(_adapter *adapter, u8 *out_ie)
 		ielength = rtw_pmkid_sync_rsn(adapter, out_ie, ielength, iEntry);
 	}
 
-	if ((psecuritypriv->auth_type == MLME_AUTHTYPE_SAE) &&
-		(psecuritypriv->rsnx_ie_len >= 3)) {
+	if ((psecuritypriv->rsnx_ie_len >= 3)) {
 		u8 *_pos = out_ie + (psecuritypriv->supplicant_ie[1] + 2);
 		_rtw_memcpy(_pos, psecuritypriv->rsnx_ie,
 			psecuritypriv->rsnx_ie_len);

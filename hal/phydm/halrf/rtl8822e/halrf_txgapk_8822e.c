@@ -70,6 +70,44 @@ void _halrf_txgapk_reload_bb_registers_8822e(
 	}
 }
 
+void _halrf_txgapk_backup_kip_registers_8822e(
+	struct dm_struct *dm,
+	u32 *kip_reg,
+	u32 kip_reg_backup[][2],
+	u32 reg_num)
+{
+	u32 i, j;
+
+	for (i = 0; i < reg_num; i++) {
+		for (j = 0; j < MAX_PATH_NUM_8822E; j++) {
+			odm_set_bb_reg(dm, R_0x1b00, BIT(2) | BIT(1), j);
+			kip_reg_backup[i][j] = odm_get_bb_reg(dm, kip_reg[i], MASKDWORD);
+
+			RF_DBG(dm, DBG_RF_TXGAPK, "[TXGAPK] Backup KIP 0x%x = 0x%x\n",
+			       kip_reg[i], kip_reg_backup[i][j]);
+		}
+	}
+}
+
+void _halrf_txgapk_reload_kip_registers_8822e(
+	struct dm_struct *dm,
+	u32 *kip_reg,
+	u32 kip_reg_backup[][2],
+	u32 reg_num)
+{
+	u32 i, j;
+
+	for (i = 0; i < reg_num; i++) {
+		for (j = 0; j < MAX_PATH_NUM_8822E; j++) {
+			odm_set_bb_reg(dm, R_0x1b00, BIT(2) | BIT(1), j);
+			odm_set_bb_reg(dm, kip_reg[i], MASKDWORD, kip_reg_backup[i][j]);
+
+			RF_DBG(dm, DBG_RF_TXGAPK, "[TXGAPK] Reload KIP 0x%x = 0x%x\n",
+			       kip_reg[i], kip_reg_backup[i][j]);
+		}
+	}
+}
+
 void _halrf_txgapk_tx_pause_8822e(
 	struct dm_struct *dm)
 {
@@ -375,7 +413,8 @@ void _halrf_txgapk_calculate_offset_8822e(
 		odm_set_bb_reg(dm, R_0x1b00, 0x00000006, path);
 		odm_set_rf_reg(dm, path, RF_0xde, 0x10000, 0x1);
 		odm_set_rf_reg(dm, path, RF_0x00, 0xf0000, 0x5);
-		odm_set_rf_reg(dm, path, RF_0x88, 0x00700, 0x1);
+		odm_set_rf_reg(dm, path, RF_0x88, 0x00070, 0x1);
+		odm_set_rf_reg(dm, path, RF_0x88, 0x0000f, 0x1);
 		odm_set_rf_reg(dm, path, RF_0xdf, 0x10000, 0x1);
 		odm_set_rf_reg(dm, path, RF_0x87, 0xc0000, 0x3);
 		odm_set_rf_reg(dm, path, RF_0x00, 0x003e0, 0x0f);
@@ -388,7 +427,6 @@ void _halrf_txgapk_calculate_offset_8822e(
 		odm_set_bb_reg(dm, R_0x1b2c, 0x00000fff, 0x038);
 		odm_set_bb_reg(dm, R_0x1b00, MASKDWORD, set_1b00_cfg1[path]);
 		halrf_delay_1us(10000);
-		odm_set_bb_reg(dm, set_pi[path], 0xc0000000, backup_pi[path]);
 
 		for (i = 0; i < 30; i++) {
 			halrf_delay_1us(100);
@@ -403,10 +441,13 @@ void _halrf_txgapk_calculate_offset_8822e(
 			tmp = odm_get_bb_reg(dm, 0x1bfc, 0x0000ffff);
 			RF_DBG(dm, DBG_RF_TXGAPK, "[TXGAPK]   0x1bfc[15:0](0x%x) = 0x8000   delay %d*100us\n", tmp, i + 1);
 			if (tmp == 0x8000) {
-				odm_set_bb_reg(dm, R_0x1b10, 0x000000ff, 0x00);
 				break;
 			}
 		}
+
+		odm_set_bb_reg(dm, R_0x1b10, 0x000000ff, 0x00);
+		halrf_delay_1us(100);
+		odm_set_bb_reg(dm, set_pi[path], 0xc0000000, backup_pi[path]);
 
 		btc_set_gnt_wl_bt_8822e(dm, false);
 
@@ -463,7 +504,6 @@ void _halrf_txgapk_calculate_offset_8822e(
 		odm_set_bb_reg(dm, R_0x1b2c, 0x00000fff, 0x038);
 		odm_set_bb_reg(dm, R_0x1b00, MASKDWORD, set_1b00_cfg1[path]);
 		halrf_delay_1us(10000);
-		odm_set_bb_reg(dm, set_pi[path], 0xc0000000, backup_pi[path]);
 
 		for (i = 0; i < 30; i++) {
 			halrf_delay_1us(100);
@@ -478,10 +518,13 @@ void _halrf_txgapk_calculate_offset_8822e(
 			tmp = odm_get_bb_reg(dm, 0x1bfc, 0x0000ffff);
 			RF_DBG(dm, DBG_RF_TXGAPK, "[TXGAPK]   0x1bfc[15:0](0x%x) = 0x8000   delay %d*100us\n", tmp, i + 1);
 			if (tmp == 0x8000) {
-				odm_set_bb_reg(dm, R_0x1b10, 0x000000ff, 0x00);
 				break;
 			}
 		}
+		
+		odm_set_bb_reg(dm, R_0x1b10, 0x000000ff, 0x00);
+		halrf_delay_1us(100);
+		odm_set_bb_reg(dm, set_pi[path], 0xc0000000, backup_pi[path]);
 
 		odm_set_bb_reg(dm, R_0x1b00, 0x00000006, path);
 		odm_set_bb_reg(dm, R_0x1bd4, 0x00200000, 0x1);
@@ -858,8 +901,12 @@ void halrf_txgapk_8822e(
 	struct _halrf_txgapk_info *txgapk = &rf->halrf_txgapk_info;
 	struct dm_rf_calibration_struct *cali_info = &dm->rf_calibrate_info;
 	u8 path_idx;
-	u32 bb_reg_backup[2];
-	u32 bb_reg[2] = {R_0x520, R_0x1e70};	/*TX Pause Regiter 0x520, 0x1e70*/
+	u32 bb_reg_backup[3];
+	u32 bb_reg[3] = {R_0x520, R_0x1e70, R_0x1b00};	/*TX Pause Regiter 0x520, 0x1e70*/
+	u32 bb_reg_backup_num = 3;
+	u32 kip_reg_backup[2][2];
+	u32 kip_reg[2] = {R_0x1b38, R_0x1b20};	/*KIP Regiter 0x1b38, 0x1b20*/
+	u32 kip_reg_backup_num = 2;
 
 	RF_DBG(dm, DBG_RF_TXGAPK, "[TXGAPK] ======>%s\n", __func__);
 
@@ -887,7 +934,8 @@ void halrf_txgapk_8822e(
 
 	/*_halrf_txgapk_disable_power_trim_8822e(dm);*/
 
-	_halrf_txgapk_backup_bb_registers_8822e(dm, bb_reg, bb_reg_backup, 2);
+	_halrf_txgapk_backup_bb_registers_8822e(dm, bb_reg, bb_reg_backup, bb_reg_backup_num);
+	_halrf_txgapk_backup_kip_registers_8822e(dm, kip_reg, kip_reg_backup, kip_reg_backup_num);
 
 	_halrf_txgapk_tx_pause_8822e(dm);
 
@@ -902,7 +950,8 @@ void halrf_txgapk_8822e(
 
 	_halrf_txgapk_write_tx_gain_8822e(dm);
 
-	_halrf_txgapk_reload_bb_registers_8822e(dm, bb_reg, bb_reg_backup, 2);
+	_halrf_txgapk_reload_kip_registers_8822e(dm, kip_reg, kip_reg_backup, kip_reg_backup_num);
+	_halrf_txgapk_reload_bb_registers_8822e(dm, bb_reg, bb_reg_backup, bb_reg_backup_num);
 
 	/*_halrf_txgapk_enable_power_trim_8822e(dm);*/
 

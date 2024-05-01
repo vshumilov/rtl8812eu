@@ -66,7 +66,7 @@ boolean _iqk_check_cal_8822e(
 
 		if (cnt1 >= 3000) {
 			fail = true;
-			/* notready = false; */
+			notready = false;
 			RF_DBG(dm, DBG_RF_IQK, "[IQK]NCTL1 1 timeout!!!\n");
 			break;
 		}
@@ -817,8 +817,10 @@ boolean _iqk_one_shot_8822e(
 __odm_func_aon__
 void _iqk_txxym_dump_8822e(struct dm_struct *dm, u8 path)
 {
+	struct dm_iqk_info *iqk_info = &dm->IQK_info;
 	u32 reg1b14, reg1b1c, reg1b38;
 	u32 i = 0;
+	u32 low_bnd = 0, high_bnd = 0;
 
 	odm_set_bb_reg(dm, 0x1b00, 0x00000006, path);
 	reg1b14 = odm_get_bb_reg(dm, 0x1b14, MASKDWORD);
@@ -826,28 +828,50 @@ void _iqk_txxym_dump_8822e(struct dm_struct *dm, u8 path)
 	reg1b38 = odm_get_bb_reg(dm, 0x1b38, MASKDWORD);
 
 	odm_set_bb_reg(dm, 0x1b1c, 0x00000003, 0x2);
-	for(i = 0; i< 24; i++) {
-		odm_set_bb_reg(dm, 0x1b14, MASKDWORD, 0x000000e6);
-		odm_set_bb_reg(dm, 0x1b14, MASKDWORD, 0x00000000);		
-		RF_DBG(dm, DBG_RF_IQK, "[IQK]S%x, TXXYM%x = 0x%x\n", path, i, odm_get_bb_reg(dm, 0x1b38, MASKDWORD));
-	}
+
 	/*	
 	XYM6~XYM23 --> TRX BW80
 	XYM10~XYM19 --> TRX BW40
 	XYM12~XYM17 --> TRX BW20
 	*/
+
+    switch ((iqk_info->rf_reg18 & 0x3000) >> 12) {
+    case 0x3: //20M
+		low_bnd = 12;
+		high_bnd = 17;
+        break;
+    case 0x2: //40M
+		low_bnd = 10;
+		high_bnd = 19;
+        break;
+    case 0x1: //80M
+		low_bnd = 6;
+		high_bnd = 23;
+        break;
+    default:
+		low_bnd = 6;
+		high_bnd = 23;
+        break;
+    }
+
+	for(i = low_bnd; i <= high_bnd; i++) {
+		odm_set_bb_reg(dm, 0x1b14, MASKDWORD, 0x000000e0 + i);
+		odm_set_bb_reg(dm, 0x1b14, MASKDWORD, 0x00000000);		
+		RF_DBG(dm, DBG_RF_IQK, "[IQK]S%x, TXXYM%d = 0x%x\n", path, i, odm_get_bb_reg(dm, 0x1b38, MASKDWORD));
+	}
 	odm_set_bb_reg(dm, 0x1b14, MASKDWORD, reg1b14);
 	odm_set_bb_reg(dm, 0x1b1c, MASKDWORD, reg1b1c);	
 	odm_set_bb_reg(dm, 0x1b38, MASKDWORD, reg1b38);
 }
 
 __odm_func_aon__
-void _iqk_5g_txk_iqk_8822e(struct dm_struct *dm, u8 path)
+boolean _iqk_5g_txk_iqk_8822e(struct dm_struct *dm, u8 path)
 {
 	struct dm_iqk_info *iqk_info = &dm->IQK_info;
 	boolean kfail = false;
 	u32 reg_tmp = 0;
-
+	u32 i = 0, j = 0;
+	u32 page = 0, addr = 0;
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]===>%s\n", __func__);	
 	odm_set_rf_reg(dm, path, 0xdf, 0x00010, 0x0);
 	odm_set_rf_reg(dm, path, 0xde, 0x10000, 0x1);
@@ -912,28 +936,62 @@ void _iqk_5g_txk_iqk_8822e(struct dm_struct *dm, u8 path)
 	odm_set_bb_reg(dm, 0x1bcc, 0x0000003f, 0x00);
 	odm_set_bb_reg(dm, 0x1bcc, 0x00000fc0, 0x12);
 	RF_DBG(dm, DBG_RF_IQK, "[IQK](2) LOK S%x, 0x1bcc = 0x%x, txbb = 0x%x\n", path, odm_get_bb_reg(dm, 0x1bcc, 0x00000fc0), odm_get_rf_reg(dm, path, 0x56, 0x0001f));	
-
+#if 0
+	page = odm_get_bb_reg(dm, 0x1b00, 0x00000006);
+	for (i = 0; i< 3; i++) {
+		odm_set_bb_reg(dm, R_0x1b00, BIT(2) | BIT(1), i);
+		RF_DBG(dm, DBG_RF_IQK, "[IQK]TXK S%x,  ====  before TXK 0x1b00 = %x ====  \n", path, odm_get_bb_reg(dm, 0x1b00, MASKDWORD));
+		for (addr = 0x1b00; addr < 0x1c00; addr += 0x10) {
+			RF_DBG(dm, DBG_RF_IQK, "[IQK] S%x, 0x%x : 0x%08x  0x%08x  0x%08x  0x%08x\n", path, addr,
+				odm_get_bb_reg(dm, addr, MASKDWORD),
+				odm_get_bb_reg(dm, addr + 0x4, MASKDWORD),
+				odm_get_bb_reg(dm, addr + 0x8, MASKDWORD),
+				odm_get_bb_reg(dm, addr + 0xc, MASKDWORD));
+		}
+	}
+	odm_set_bb_reg(dm, 0x1b00, 0x00000006, page);
+#endif
 	if(iqk_info->is_nbiqk) {
 		kfail = _iqk_one_shot_8822e(dm, path, NBTXK);
 	} else {
 		kfail = _iqk_one_shot_8822e(dm, path, TXIQK);		
 	}
-	
+#if 0
+	page = odm_get_bb_reg(dm, 0x1b00, 0x00000006);
+	for (i = 0; i< 3; i++) {
+		odm_set_bb_reg(dm, R_0x1b00, BIT(2) | BIT(1), i);
+		RF_DBG(dm, DBG_RF_IQK, "[IQK]TXK S%x, ====  after TXK 0x1b00 = %x ====  \n", path, odm_get_bb_reg(dm, 0x1b00, MASKDWORD));	
+		for (addr = 0x1b00; addr < 0x1c00; addr += 0x10) {
+			RF_DBG(dm, DBG_RF_IQK, "[IQK] S%x, 0x%x : 0x%08x  0x%08x  0x%08x  0x%08x\n", path, addr,
+				odm_get_bb_reg(dm, addr, MASKDWORD),
+				odm_get_bb_reg(dm, addr + 0x4, MASKDWORD),
+				odm_get_bb_reg(dm, addr + 0x8, MASKDWORD),
+				odm_get_bb_reg(dm, addr + 0xc, MASKDWORD));
+		}
+	}
+	odm_set_bb_reg(dm, 0x1b00, 0x00000006, page);
+#endif
 	//TXK summary
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]TXK S%x, 0x1b38 = 0x%x\n", path, odm_get_bb_reg(dm, 0x1b38, MASKDWORD));	
 	iqk_info->iqk_fail_report[0][path][0] = kfail;
 
 	if(kfail) {
-		odm_set_bb_reg(dm, 0x1b38, MASKDWORD, 0x40000000);
 		_iqk_txxym_dump_8822e(dm, path);
 		iqk_info->fail_step |= BIT(1);
+		odm_set_bb_reg(dm, 0x1b00, 0x00000006, path);
+		odm_set_bb_reg(dm, 0x1b38, MASKDWORD, 0x40000000);
 		odm_set_bb_reg(dm, 0x1b70, BIT(8), 0x0);
 		RF_DBG(dm, DBG_RF_IQK, "[IQK]5G TXK Fail \n");
+		RF_DBG(dm, DBG_RF_IQK, "[IQK](1)TXK S%x, 0x1b00 = 0x%x\n", path, odm_get_bb_reg(dm, 0x1b00, MASKDWORD));	
+		RF_DBG(dm, DBG_RF_IQK, "[IQK](1)TXK S%x, 0x1b38 = 0x%x\n", path, odm_get_bb_reg(dm, 0x1b38, MASKDWORD));	
+		RF_DBG(dm, DBG_RF_IQK, "[IQK](1)TXK S%x, 0x1b70 = 0x%x\n", path, odm_get_bb_reg(dm, 0x1b70, MASKDWORD));	
+
 	}
+	return kfail;
 }
 
 __odm_func_aon__
-void _iqk_2g_txk_iqk_8822e(struct dm_struct *dm, u8 path)
+boolean _iqk_2g_txk_iqk_8822e(struct dm_struct *dm, u8 path)
 {
 	struct dm_iqk_info *iqk_info = &dm->IQK_info;
 	boolean kfail = false;
@@ -988,6 +1046,9 @@ void _iqk_2g_txk_iqk_8822e(struct dm_struct *dm, u8 path)
 
 	//LOK summary
 	iqk_info->lok_fail[path] = _lok1_check_8822e(dm, path);
+	RF_DBG(dm, DBG_RF_IQK, "[IQK] RF 0x8 : 0x%x\n", odm_get_rf_reg(dm, path, 0x08, 0xfffff));
+	RF_DBG(dm, DBG_RF_IQK, "[IQK] RF 0x9 : 0x%x\n", odm_get_rf_reg(dm, path, 0x09, 0xfffff));
+	RF_DBG(dm, DBG_RF_IQK, "[IQK] RF 0xa : 0x%x\n", odm_get_rf_reg(dm, path, 0x0a, 0xfffff));
 		
 	//TXK	
 	odm_set_rf_reg(dm, path, 0x56, 0x003e0, 0x07);
@@ -1014,6 +1075,7 @@ void _iqk_2g_txk_iqk_8822e(struct dm_struct *dm, u8 path)
 		odm_set_bb_reg(dm, 0x1b70, BIT(8), 0x0);
 		RF_DBG(dm, DBG_RF_IQK, "[IQK] 2G TXK Fail \n");
 	}
+	return kfail;
 }
 
 __odm_func_aon__
@@ -1322,6 +1384,7 @@ void _iqk_5g_rxk_iqk_8822e(struct dm_struct *dm, u8 path)
 	iqk_info->iqk_fail_report[0][path][1] = kfail;
 
 	if(kfail) {		
+		_iqk_txxym_dump_8822e(dm, path); //trx share for dbg
 		odm_set_bb_reg(dm, 0x1b3c, MASKDWORD, 0x40000000);
 		iqk_info->fail_step |= BIT(3);
 		odm_set_bb_reg(dm, 0x1b70, BIT(0), 0x0);
@@ -1338,14 +1401,17 @@ void _iqk_2g_rxk_iqk_8822e(struct dm_struct *dm, u8 path)
 	
 	odm_set_rf_reg(dm, path, 0x9e, 0x00020, 0x0);
 	odm_set_rf_reg(dm, path, 0x9e, 0x00400, 0x0);
-	odm_set_rf_reg(dm, path, 0x56, 0x003e0, 0x00);
+	odm_set_rf_reg(dm, path, 0x56, 0x003e0, 0x04);
 	kfail = _iqk_2g_rx_gain_search1_8822e(dm, path, false);
 	
 	if(kfail) {	
 		_iqk_sram_dump_8822e(dm, path);	
+		odm_set_bb_reg(dm, 0x1b24, 0x000fffff, 0x70108); //LNA=0, RXBB = 0x8
 		iqk_info->fail_step |= BIT(2);		
 		RF_DBG(dm, DBG_RF_IQK, "[IQK]S%x,2G RXK1 Fail \n", path);
-	} else {
+	}
+	//_iqk_sram_dump_8822e(dm, path);		
+
 	 	odm_set_bb_reg(dm, 0x1b00, 0x00000006, path);
 		//odm_set_bb_reg(dm, 0x1b18, 0x00000002, 0x0);
 		odm_set_bb_reg(dm, 0x1bcc, 0x0000003f, 0x12);
@@ -1362,7 +1428,7 @@ void _iqk_2g_rxk_iqk_8822e(struct dm_struct *dm, u8 path)
 		} else	{
 			kfail = _iqk_one_shot_8822e(dm, path, RXIQK2);			
 		}
-	}
+	
 	// RX Summary
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]RXK S%x, 0x1b3c = 0x%x\n", path, odm_get_bb_reg(dm, 0x1b3c, MASKDWORD));
 	iqk_info->iqk_fail_report[0][path][1] = kfail;
@@ -1383,6 +1449,7 @@ void _iqk_iqk_by_path_8822e(
 {
 	struct dm_iqk_info *iqk_info = &dm->IQK_info;
 	u8 path = 0x0;	
+	boolean txkfail = false;
 //	u8 i, j, k, q;
 
 	//RF_DBG(dm, DBG_RF_IQK, "[IQK]===>%s\n", __func__);
@@ -1397,15 +1464,30 @@ void _iqk_iqk_by_path_8822e(
 #endif
 */
 	for(path = 0x0; path < SS_8822E; path++) {
+		if(path == RF_PATH_A){		
+			odm_set_rf_reg(dm, path, RF_PATH_B, 0xf0000, 0x1);	
+		} else {		
+			odm_set_rf_reg(dm, path, RF_PATH_A, 0xf0000, 0x1);	
+		}
+
+
 		if (iqk_info->iqk_band == ODM_BAND_2_4G) {
 			iqk_info->is_nbiqk = true;
-			_iqk_2g_txk_iqk_8822e(dm, path);
+			//halrf_dack_reset_8822e(dm);
+			txkfail = _iqk_2g_txk_iqk_8822e(dm, path);
+			if(!txkfail) {
+				//halrf_dack_reset_8822e(dm);
 			_iqk_2g_rxk_iqk_8822e(dm, path);
+			}
 		} else {		
 			iqk_info->is_nbiqk = false;
-			_iqk_5g_txk_iqk_8822e(dm, path);
+			//halrf_dack_reset_8822e(dm);
+			txkfail = _iqk_5g_txk_iqk_8822e(dm, path);
+			if(!txkfail) {
+				//halrf_dack_reset_8822e(dm);
 			_iqk_5g_rxk_iqk_8822e(dm, path);
 		}
+	}
 	}
 #if 1
 	for(path = 0x0; path < SS_8822E; path++) {
@@ -1416,11 +1498,26 @@ void _iqk_iqk_by_path_8822e(
 		else
 			iqk_info->lok_idac[0][path] = 0x84220;
 
-		if(! iqk_info->iqk_fail_report[0][path][0])
+		if(! iqk_info->iqk_fail_report[0][path][0]) {
 			_iqk_backup_cfir_8822e(dm, path, TXIQK);
+			RF_DBG(dm, DBG_RF_IQK, "[IQK]S%x, Enable WBTX IQK\n", path);
+		} else {	
+			odm_set_bb_reg(dm, 0x1b00, 0x00000006, path);
+			odm_set_bb_reg(dm, 0x1b38, MASKDWORD, 0x40000000);
+			odm_set_bb_reg(dm, 0x1b70, BIT(8), 0x0);
+			odm_set_bb_reg(dm, 0x1b3c, MASKDWORD, 0x40000000);
+			odm_set_bb_reg(dm, 0x1b70, BIT(0), 0x0);
+			RF_DBG(dm, DBG_RF_IQK, "[IQK]S%x, Disable TX/RX IQK\n", path);
+		}
 		
-		if(! iqk_info->iqk_fail_report[0][path][1])	
+		if(! iqk_info->iqk_fail_report[0][path][1]) {
 			_iqk_backup_cfir_8822e(dm, path, RXIQK2);
+	    } else {
+	    	odm_set_bb_reg(dm, 0x1b00, 0x00000006, path);
+			odm_set_bb_reg(dm, 0x1b3c, MASKDWORD, 0x40000000);
+			odm_set_bb_reg(dm, 0x1b70, BIT(0), 0x0);
+			RF_DBG(dm, DBG_RF_IQK, "[IQK]S%x, Disable RX IQK\n", path);
+	    }
 	}
 #endif
 #if 0
@@ -1497,6 +1594,15 @@ void _iqk_start_iqk_8822e(
 	_iqk_set_gnt_wl_gnt_bt_8822e(dm, true);
 	_iqk_iqk_by_path_8822e(dm, segment_iqk);
 	_iqk_set_gnt_wl_gnt_bt_8822e(dm, false);
+
+	odm_set_bb_reg(dm, 0x1b00, 0x00000006, 0);
+	RF_DBG(dm, DBG_RF_IQK, "[IQK](2)TXK S%x, 0x1b00 = 0x%x\n", 0x0, odm_get_bb_reg(dm, 0x1b00, MASKDWORD));	
+	RF_DBG(dm, DBG_RF_IQK, "[IQK](2)TXK S%x, 0x1b38 = 0x%x\n", 0x0, odm_get_bb_reg(dm, 0x1b38, MASKDWORD));	
+	RF_DBG(dm, DBG_RF_IQK, "[IQK](2)TXK S%x, 0x1b70 = 0x%x\n", 0x0, odm_get_bb_reg(dm, 0x1b70, MASKDWORD));	
+	odm_set_bb_reg(dm, 0x1b00, 0x00000006, 1);
+	RF_DBG(dm, DBG_RF_IQK, "[IQK](2)TXK S%x, 0x1b00 = 0x%x\n", 0x1, odm_get_bb_reg(dm, 0x1b00, MASKDWORD));	
+	RF_DBG(dm, DBG_RF_IQK, "[IQK](2)TXK S%x, 0x1b38 = 0x%x\n", 0x1, odm_get_bb_reg(dm, 0x1b38, MASKDWORD));	
+	RF_DBG(dm, DBG_RF_IQK, "[IQK](2)TXK S%x, 0x1b70 = 0x%x\n", 0x1, odm_get_bb_reg(dm, 0x1b70, MASKDWORD));	
 
 }
 
@@ -1645,7 +1751,7 @@ void _phy_iq_calibrate_8822e(
 		R_0x41a4};
 	u32 backup_rf_reg[RF_REG_NUM_8822E] = {0x19, 0x9e};
 //	boolean is_mp = false;
-//	u8 i = 0, q = 0;
+	u8 i = 0;
 
 	struct dm_iqk_info *iqk_info = &dm->IQK_info;
 
@@ -1668,7 +1774,7 @@ void _phy_iq_calibrate_8822e(
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]==========IQK strat!!!!!==========\n");
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]band_type = %s, band_width = %d, ExtPA2G = %d, ext_pa_5g = %d\n", (*dm->band_type == ODM_BAND_5G) ? "5G" : "2G", *dm->band_width, dm->ext_pa, dm->ext_pa_5g);
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]Interface = %d, Cv = %x\n", dm->support_interface, dm->cut_version);
-	RF_DBG(dm, DBG_RF_IQK, "[IQK]Test V7 \n");
+	RF_DBG(dm, DBG_RF_IQK, "[IQK]Test V35 \n");
 	iqk_info->iqk_step = 0;
 	iqk_info->fail_step = 0;
 	iqk_info->iqk_times++;	
@@ -1679,15 +1785,21 @@ void _phy_iq_calibrate_8822e(
 	_iqk_backup_rf_8822e(dm, RF_backup, backup_rf_reg);
 
 	_iqk_switch_table_8822e(dm);
+
+	for(i =0; i < 2; i++){
 	_iqk_preset_8822e(dm);
 	_iqk_macbb_setting_8822e(dm);
 	_iqk_afe_setting_8822e(dm);
 	_iqk_start_iqk_8822e(dm, segment_iqk);
 	_iqk_afe_restore_8822e(dm);	
 	_iqk_macbb_restore_8822e(dm);
+		if((iqk_info->iqk_fail_report[0][0][0] == false) && (iqk_info->iqk_fail_report[0][1][0] == false))
+			break;
+	}
 	_iqk_restore_rf_8822e(dm, backup_rf_reg, RF_backup);
 	_iqk_restore_mac_bb_8822e(dm, MAC_backup, BB_backup, backup_mac_reg, backup_bb_reg);
-
+	//halrf_dack_reset_8822e(dm);
+	//halrf_delay_10us(1);
 #if 0
 	for(q = 0; q < 2; q++) {
 			RF_DBG(dm, DBG_RF_IQK, "[IQK](2)iqk_info->iqk_tab[%x]			  	     = %2x \n", q, iqk_info->iqk_tab[q]);
@@ -1702,7 +1814,7 @@ void _phy_iq_calibrate_8822e(
 #endif
 	if(iqk_info->fail_step != 0x0)
 		iqk_info->fail_count++;
-	RF_DBG(dm, DBG_RF_IQK, "[IQK]iqk_times/pass/fail_id = %d/ %d /%d\n", iqk_info->iqk_times, iqk_info->kcount, iqk_info->fail_step);
+	RF_DBG(dm, DBG_RF_IQK, "[IQK]i = %d, iqk_times/pass/fail_id = %d/ %d /%d\n", i, iqk_info->iqk_times, iqk_info->kcount, iqk_info->fail_step);
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]==========IQK end!!!!!==========\n");
 }
 

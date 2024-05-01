@@ -115,4 +115,7 @@ void halrf_pwr_trk_info_8822e(void *dm_void, u32 *_used, char *output, u32 *_out
 void halrf_ex_dac_fifo_rst_8822e(struct dm_struct *dm);
 
 void halrf_kip_rsvd_page_8822e(void *dm_void, u8 *buf, u32 *buf_size);
+
+void halrf_dack_reset_8822e(struct dm_struct *dm);
+
 #endif /*__HALRF_8822E_H__*/

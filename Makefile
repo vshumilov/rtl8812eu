@@ -122,7 +122,7 @@ EXTRA_CFLAGS += -DCONFIG_RTW_ANDROID=$(CONFIG_RTW_ANDROID)
 endif
 
 ########################## Debug ###########################
-CONFIG_RTW_DEBUG = y
+CONFIG_RTW_DEBUG = n
 # default log level is _DRV_INFO_ = 4,
 # please refer to "How_to_set_driver_debug_log_level.doc" to set the available level.
 CONFIG_RTW_LOG_LEVEL = 4
@@ -167,6 +167,9 @@ CONFIG_SECURE_DMA_MEM_ADDR = 0
 CONFIG_SECURE_DMA_MEM_SIZE = 3686400
 ###################### Platform Related #######################
 CONFIG_PLATFORM_I386_PC = y
+CONFIG_PLATFORM_ARM_GENERIC = n
+CONFIG_PLATFORM_ARM64 = n
+CONFIG_PLATFORM_ARM64_RPI = n
 CONFIG_PLATFORM_ANDROID_X86 = n
 CONFIG_PLATFORM_ANDROID_INTEL_X86 = n
 CONFIG_PLATFORM_JB_X86 = n
@@ -1141,24 +1144,9 @@ EXTRA_CFLAGS += -DCONFIG_WAPI_SUPPORT
 endif
 
 
-ifeq ($(CONFIG_EFUSE_CONFIG_FILE), y)
-EXTRA_CFLAGS += -DCONFIG_EFUSE_CONFIG_FILE
 
-#EFUSE_MAP_PATH
-USER_EFUSE_MAP_PATH ?=
-ifneq ($(USER_EFUSE_MAP_PATH),)
-EXTRA_CFLAGS += -DEFUSE_MAP_PATH=\"$(USER_EFUSE_MAP_PATH)\"
-else ifeq ($(MODULE_NAME), 8189es)
-EXTRA_CFLAGS += -DEFUSE_MAP_PATH=\"/system/etc/wifi/wifi_efuse_8189e.map\"
-else ifeq ($(MODULE_NAME), 8723bs)
-EXTRA_CFLAGS += -DEFUSE_MAP_PATH=\"/system/etc/wifi/wifi_efuse_8723bs.map\"
-else ifeq ($(MODULE_NAME), 8812eu)
-EXTRA_CFLAGS += -DEFUSE_MAP_PATH=\"/etc/wifi/RTL8812EU-RFE21.map\"
-else ifeq ($(MODULE_NAME), 88x2eu)
-EXTRA_CFLAGS += -DEFUSE_MAP_PATH=\"/etc/wifi/RTL8812EU-RFE21.map\"
-else
-EXTRA_CFLAGS += -DEFUSE_MAP_PATH=\"/system/etc/wifi/wifi_efuse_$(MODULE_NAME).map\"
-endif
+EXTRA_CFLAGS += -DCONFIG_EFUSE_CONFIG_FILE
+EXTRA_CFLAGS += -DEFUSE_MAP_PATH=\"/etc/wifi/wifi_efuse_$(MODULE_NAME).map\"
 
 #WIFIMAC_PATH
 USER_WIFIMAC_PATH ?=
@@ -1166,8 +1154,6 @@ ifneq ($(USER_WIFIMAC_PATH),)
 EXTRA_CFLAGS += -DWIFIMAC_PATH=\"$(USER_WIFIMAC_PATH)\"
 else
 EXTRA_CFLAGS += -DWIFIMAC_PATH=\"/data/wifimac.txt\"
-endif
-
 endif
 
 ifeq ($(CONFIG_EXT_CLK), y)
@@ -1431,6 +1417,35 @@ KSRC := /lib/modules/$(KVER)/build
 MODDESTDIR := /lib/modules/$(KVER)/kernel/drivers/net/wireless/
 INSTALL_PREFIX :=
 STAGINGMODDIR := /lib/modules/$(KVER)/kernel/drivers/staging
+endif
+
+ifeq ($(CONFIG_PLATFORM_ARM_GENERIC), y)
+EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
+ARCH ?= arm
+CROSS_COMPILE ?= arm-linux-gnueabi-
+KSRC ?= $(HOME)/linux
+endif
+
+ifeq ($(CONFIG_PLATFORM_ARM64_RPI), y)
+EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
+EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
+ARCH ?= arm64
+CROSS_COMPILE ?=
+KVER ?= $(shell uname -r)
+KSRC := /lib/modules/$(KVER)/build
+MODDESTDIR := /lib/modules/$(KVER)/kernel/drivers/net/wireless/
+INSTALL_PREFIX :=
+endif
+
+ifeq ($(CONFIG_PLATFORM_ARM64), y)
+ARCH := arm64
+EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
+EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
+CROSS_COMPILE := aarch64-linux-gnu-
+KVER ?= $(shell uname -r)
+KSRC := /lib/modules/$(KVER)/build
+MODDESTDIR := /lib/modules/$(KVER)/kernel/drivers/net/wireless/
+INSTALL_PREFIX :=
 endif
 
 ifeq ($(CONFIG_PLATFORM_NV_TK1), y)

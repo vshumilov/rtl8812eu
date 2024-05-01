@@ -21,6 +21,7 @@ MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Realtek Wireless Lan Driver");
 MODULE_AUTHOR("Realtek Semiconductor Corp.");
 MODULE_VERSION(DRIVERVERSION);
+MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);  // merged from new realtek driver. wtf?
 
 /* module param defaults */
 int rtw_chip_version = 0x00;
@@ -3200,6 +3201,14 @@ void rtw_cancel_dynamic_chk_timer(_adapter *padapter)
 
 void rtw_cancel_all_timer(_adapter *padapter)
 {
+#ifdef CONFIG_RTW_WNM
+	_cancel_timer_ex(&padapter->mlmepriv.nb_info.roam_scan_timer);
+#endif
+
+#ifdef CONFIG_RTW_80211R
+	_cancel_timer_ex(&padapter->mlmeextpriv.ft_link_timer);
+	_cancel_timer_ex(&padapter->mlmeextpriv.ft_roam_timer);
+#endif
 
 	_cancel_timer_ex(&padapter->mlmepriv.assoc_timer);
 
@@ -3270,15 +3279,15 @@ u8 rtw_free_drv_sw(_adapter *padapter)
 		#ifdef CONFIG_CONCURRENT_MODE
 		struct roch_info *prochinfo = &padapter->rochinfo;
 		#endif
-		if (!rtw_p2p_chk_state(pwdinfo, P2P_STATE_NONE)) {
-			_cancel_timer_ex(&pwdinfo->find_phase_timer);
-			_cancel_timer_ex(&pwdinfo->restore_p2p_state_timer);
-			_cancel_timer_ex(&pwdinfo->pre_tx_scan_timer);
-			#ifdef CONFIG_CONCURRENT_MODE
-			_cancel_timer_ex(&prochinfo->ap_roch_ch_switch_timer);
-			#endif /* CONFIG_CONCURRENT_MODE */
-			rtw_p2p_set_state(pwdinfo, P2P_STATE_NONE);
-		}
+		_cancel_timer_ex(&pwdinfo->find_phase_timer);
+		_cancel_timer_ex(&pwdinfo->restore_p2p_state_timer);
+		_cancel_timer_ex(&pwdinfo->pre_tx_scan_timer);
+		_cancel_timer_ex(&pwdinfo->reset_ch_sitesurvey);
+		_cancel_timer_ex(&pwdinfo->reset_ch_sitesurvey2);
+		#ifdef CONFIG_CONCURRENT_MODE
+		_cancel_timer_ex(&prochinfo->ap_roch_ch_switch_timer);
+		#endif /* CONFIG_CONCURRENT_MODE */
+		rtw_p2p_set_state(pwdinfo, P2P_STATE_NONE);
 	}
 	#endif
 	/* add for CONFIG_IEEE80211W, none 11w also can use */

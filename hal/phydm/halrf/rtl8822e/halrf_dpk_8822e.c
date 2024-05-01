@@ -38,7 +38,7 @@
 
 /*---------------------------Define Local Constant---------------------------*/
 
-/*8822E DPK ver:0xc 20230629*/
+/*8822E DPK ver:0xe 20230825*/
 
 static u32
 _btc_wait_indirect_reg_ready_8822e(
@@ -443,7 +443,7 @@ void _dpk_tx_pause_8822e(
 	reg_rf0_a = (u8)odm_get_rf_reg(dm, RF_PATH_A, RF_0x00, 0xF0000);
 	reg_rf0_b = (u8)odm_get_rf_reg(dm, RF_PATH_B, RF_0x00, 0xF0000);
 
-	while (((reg_rf0_a == 2) || (reg_rf0_b == 2)) && count < 2500) {
+	while (((reg_rf0_a != 3) && (reg_rf0_b != 3)) && count < 2500) {
 		reg_rf0_a = (u8)odm_get_rf_reg(dm, RF_PATH_A, RF_0x00, 0xF0000);
 		reg_rf0_b = (u8)odm_get_rf_reg(dm, RF_PATH_B, RF_0x00, 0xF0000);
 		ODM_delay_us(2);
@@ -458,7 +458,7 @@ void _dpk_mac_bb_setting_8822e(
 {
 	struct dm_dpk_info *dpk_info = &dm->dpk_info;
 
-	//_dpk_tx_pause_8822e(dm);
+	_dpk_tx_pause_8822e(dm);
 
 	if (dpk_info->is_tssi_mode) {
 		odm_set_bb_reg(dm, R_0x1e7c, BIT(30), 0x0);
@@ -939,8 +939,6 @@ u8 _dpk_pas_agc_8822e(
 				i = 1;
 			} else
 				i = 3;
-
-			agc_cnt++;
 			break;
 
 		case 1: /*Gain > criterion*/
@@ -960,6 +958,7 @@ u8 _dpk_pas_agc_8822e(
 				limited_pga = 1;
 			}
 			i = 0;
+			agc_cnt++;
 			break;
 
 		case 2: /*Gain < criterion*/
@@ -979,6 +978,7 @@ u8 _dpk_pas_agc_8822e(
 				limited_pga = 1;
 			}
 			i = 0;
+			agc_cnt++;
 			break;
 
 		case 3: /*gainloss*/
@@ -1011,6 +1011,7 @@ u8 _dpk_pas_agc_8822e(
 			       tmp_txagc);
 			limited_pga = 0;
 			i = 3;
+			agc_cnt++;
 			break;
 
 		case 5:	/*GL < criterion*/
@@ -1027,6 +1028,7 @@ u8 _dpk_pas_agc_8822e(
 			       tmp_txagc);
 			limited_pga = 0;
 			i = 3;
+			agc_cnt++;
 			break;
 
 		case 6:

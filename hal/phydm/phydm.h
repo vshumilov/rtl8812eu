@@ -442,6 +442,8 @@ enum odm_cmninfo {
 	ODM_CMNINFO_HP_HWID,
 	ODM_CMNINFO_HUAWEI_HWID,
 	ODM_CMNINFO_ATHEROS_HWID,
+	ODM_CMNINFO_BROADCOM_HWID,
+	ODM_CMNINFO_RALINK_HWID,
 	ODM_CMNINFO_TSSI_ENABLE, /*also for cmn_info_update*/
 	ODM_CMNINFO_DIS_DPD,
 	ODM_CMNINFO_POWER_VOLTAGE,
@@ -806,6 +808,8 @@ struct dm_struct {
 	u32			rx_pwdb_ave;
 	boolean		is_init_hw_info_by_rfe;
 	boolean         is_R2R_CCA_MASKT_TIME_SHORT;
+	boolean		is_fixed_chsm_winsize_bc;
+	boolean		is_fixed_chsm_winsize_mtk;
 #if (DM_ODM_SUPPORT_TYPE & ODM_WIN)
 	u32			rts_drop_cnt;
 	u32			low_rate_tx_fail_cnt;

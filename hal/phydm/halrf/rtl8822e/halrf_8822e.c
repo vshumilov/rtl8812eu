@@ -309,6 +309,18 @@ void halrf_write_check_afe_8822e(struct dm_struct *dm, u32 add, u32 data)
 	}
 }
 
+void halrf_dack_soft_rst_8822e(struct dm_struct *dm)
+{
+	halrf_write_check_afe_8822e(dm, 0x3800, 0xee30001f);
+	halrf_write_check_afe_8822e(dm, 0x3800, 0xee32001f);
+	halrf_write_check_afe_8822e(dm, 0x382c, 0xee30001f);
+	halrf_write_check_afe_8822e(dm, 0x382c, 0xee32001f);
+	halrf_write_check_afe_8822e(dm, 0x3900, 0xee30001f);
+	halrf_write_check_afe_8822e(dm, 0x3900, 0xee32001f);
+	halrf_write_check_afe_8822e(dm, 0x392c, 0xee30001f);
+	halrf_write_check_afe_8822e(dm, 0x392c, 0xee32001f);
+}
+
 void halrf_dac_fifo_reset_8822e(struct dm_struct *dm)
 {
 	/*it needs DAC clock*/
@@ -356,6 +368,7 @@ void halrf_dac_fifo_rst_8822e(struct dm_struct *dm, u32 path, u32 iq)
 
 void halrf_ex_dac_fifo_rst_8822e(struct dm_struct *dm)
 {
+#if 0
 	u32 i;
 	
 	RF_DBG(dm, DBG_RF_DACK, "[DACK]DAC FIFO reset\n");
@@ -383,6 +396,8 @@ void halrf_ex_dac_fifo_rst_8822e(struct dm_struct *dm)
 		halrf_dac_fifo_rst_8822e(dm, 1, 1);
 		i++;
 	}
+#endif
+	halrf_dack_soft_rst_8822e(dm);
 }
 void halrf_dack_lps_bk_8822e(struct dm_struct *dm)
 {
@@ -1413,6 +1428,7 @@ void halrf_rfk_handshake_8822e(void *dm_void, boolean is_before_k)
 	u16 count;
 	u8 rfk_type = rf->rfk_type;
 	u8 path;
+	u32 i;
 
 	rf->is_rfk_h2c_timeout = false;
 
@@ -1451,7 +1467,9 @@ void halrf_rfk_handshake_8822e(void *dm_void, boolean is_before_k)
 #if (DM_ODM_SUPPORT_TYPE == ODM_CE) && (CONFIG_BTCOEX_SUPPORT_BTC_CMN == 1)		
 		hal_btcoex_WLRFKNotify(padapter, path, rfk_type, 0);
 	#endif		
-		ODM_delay_us(20);	
+		for (i = 0; i < 1000; i++)
+			ODM_delay_us(5);
+		//ODM_delay_us(20);		
 	} else {
 		/* Send RFK finish H2C cmd*/
 		h2c_parameter = 0;
