@@ -509,9 +509,9 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset,
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
 	if (started) {
-#if defined(CONFIG_MLD_KERNEL_PATCH)
-		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
+//#if defined(CONFIG_MLD_KERNEL_PATCH)
+//		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
 		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false, 0);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
 		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, 0, false);
@@ -1992,9 +1992,9 @@ exit:
 }
 
 static int cfg80211_rtw_add_key(struct wiphy *wiphy, struct net_device *ndev
-#ifdef CONFIG_MLD_KERNEL_PATCH
-	, int link_id
-#endif
+//#ifdef CONFIG_MLD_KERNEL_PATCH
+//	, int link_id
+//#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 	, int link_id
 #endif
@@ -2160,9 +2160,9 @@ addkey_end:
 }
 
 static int cfg80211_rtw_get_key(struct wiphy *wiphy, struct net_device *ndev
-#ifdef CONFIG_MLD_KERNEL_PATCH
-	, int link_id
-#endif
+//#ifdef CONFIG_MLD_KERNEL_PATCH
+//	, int link_id
+//#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 	, int link_id
 #endif
@@ -2354,9 +2354,9 @@ exit:
 }
 
 static int cfg80211_rtw_del_key(struct wiphy *wiphy, struct net_device *ndev
-#ifdef CONFIG_MLD_KERNEL_PATCH 
-	, int link_id
-#endif
+//#ifdef CONFIG_MLD_KERNEL_PATCH 
+//	, int link_id
+//#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 	, int link_id
 #endif
@@ -2380,9 +2380,9 @@ static int cfg80211_rtw_del_key(struct wiphy *wiphy, struct net_device *ndev
 }
 
 static int cfg80211_rtw_set_default_key(struct wiphy *wiphy, struct net_device *ndev
-#ifdef CONFIG_MLD_KERNEL_PATCH 
-	, int link_id
-#endif
+//#ifdef CONFIG_MLD_KERNEL_PATCH 
+//	, int link_id
+//#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 	, int link_id
 #endif
@@ -2434,9 +2434,9 @@ static int cfg80211_rtw_set_default_key(struct wiphy *wiphy, struct net_device *
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30))
 int cfg80211_rtw_set_default_mgmt_key(struct wiphy *wiphy, struct net_device *ndev
-#ifdef CONFIG_MLD_KERNEL_PATCH
-	, int link_id
-#endif
+//#ifdef CONFIG_MLD_KERNEL_PATCH
+//	, int link_id
+//#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 	, int link_id
 #endif
@@ -6538,7 +6538,7 @@ static int	cfg80211_rtw_set_txq_params(struct wiphy *wiphy
 #endif /* CONFIG_NARROWBAND_SUPPORTING */
 	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-	u8	ac, AIFS, ECWMin, ECWMax, aSifsTime;
+	u8	ac, AIFS, ECWMin, ECWMax, aSifsTime, slottime;
 	u16	TXOP;
 	u8	shift_count = 0;
 	u32	acParm;
@@ -6591,7 +6591,19 @@ static int	cfg80211_rtw_set_txq_params(struct wiphy *wiphy
 		aSifsTime = 64;
 #endif /* CONFIG_NARROWBAND_SUPPORTING */
 
-	AIFS = params->aifs * pmlmeinfo->slotTime + aSifsTime;
+	if (pmlmeinfo->sifs_override_en == 1) {
+		aSifsTime = pmlmeinfo->sifs_override;
+		RTW_INFO("cfg80211_rtw_set_txq_params: sifs_override enabled, %d\n", aSifsTime);
+	}
+	
+	if (pmlmeinfo->slottime_override_en == 0) {
+		slottime = pmlmeinfo->slotTime;
+	} else {
+		slottime = pmlmeinfo->slottime_override;
+		RTW_INFO("cfg80211_rtw_set_txq_params: slottime_override enabled, %d\n", slottime);
+	}
+	
+	AIFS = params->aifs * slottime + aSifsTime;
 
 	while ((params->cwmin + 1) >> shift_count != 1) {
 		shift_count++;

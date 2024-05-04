@@ -585,6 +585,7 @@ struct registry_priv {
 #if defined(CONFIG_CHANGE_DTIM_PERIOD) && defined(CONFIG_AP_MODE)
 	u8 dtim_period;
 #endif
+
 };
 
 extern int rtw_tx_pwr_idx_override;

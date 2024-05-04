@@ -340,6 +340,11 @@ struct mlme_ext_info {
 #ifdef CONFIG_WRITE_BCN_LEN_TO_FW
 	u16 last_bcn_len;
 #endif
+
+	u8	slottime_override_en;
+	u8	slottime_override;
+	u8	sifs_override_en;
+	u8	sifs_override;
 };
 
 int rtw_rfctl_init(_adapter *adapter);
