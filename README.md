@@ -44,6 +44,9 @@ sudo iw dev wlan0 set txpower fixed <mBm>
 ```
 Tested on my Ubuntu 22.04 VM, kernel 6.5.   
 
+Note: Changing TX power by ```iw``` will not work when injecting with 10MHz BW (see below).  
+You should manually set BW back to 20MHz, set TX power, then set BW back again.  
+
 ## 10MHz Bandwidth Transmission
 See the RF spectrum visualized [here](https://www.youtube.com/watch?v=EUj-wSgoY_E) on YouTube  
 
