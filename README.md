@@ -44,6 +44,9 @@ sudo iw dev wlan0 set txpower fixed <mBm>
 ```
 Tested on my Ubuntu 22.04 VM, kernel 6.5.   
 
+Note: Changing TX power by ```iw``` will not work when injecting with 10MHz BW (see below).  
+You should manually set BW back to 20MHz, set TX power, then set BW back again.  
+
 ## 10MHz Bandwidth Transmission
 See the RF spectrum visualized [here](https://www.youtube.com/watch?v=EUj-wSgoY_E) on YouTube  
 
@@ -105,6 +108,29 @@ Note that there are actually two values, L2H and H2L. The L2H is typically set 8
 The value you're setting is L2H. The H2L is automatically set 8dB lower.  
 
 DISCLAIMER: There's no guarantee of its performance. This may damage your hardware and I'm not gonna pay for it. Use it at your own risk. Please comply with any wireless regulations in your area.  
+
+## 802.11 DCF hacking   
+Note: I don't know if these things are actually working since no one can get the crab's datasheets.  
+Just did some global searching and replaced every place I've found.  
+
+### ACK Timeout 
+Provided by Realtek.
+e.g. Set ACK timeout to 100us:  
+```echo 100 > /proc/net/rtl88x2eu/<wlanX>/ack_timeout```  
+
+### SIFS
+EXPERIMENTAL, may not work.  
+```/proc/net/rtl88x2eu/<wlanX>/sifs_override```  
+
+### Slot time 
+EXPERIMENTAL, may not work.  
+```/proc/net/rtl88x2eu/<wlanX>/slottime_override```  
+
+DISCLAIMER: There's no guarantee of its performance.
+
+## Noise Monitor 
+Not working. Enabled every macro (like ```CONFIG_BACKGROUND_NOISE_MONITOR```) I could find and the readouts kept zero.  
+If you know something about it, please tell us in issue.
 
 ## Use with OpenIPC  
 See the tutorial [here in OpenIPC Wiki](https://github.com/OpenIPC/wiki/blob/master/en/fpv-bl-m8812eu2-wifi-adaptors.md).   
