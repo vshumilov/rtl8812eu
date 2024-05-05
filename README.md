@@ -77,15 +77,20 @@ According to the module vendor's ambiguous document and the crab's mysterious dr
 4. (Should we set it to 10MHz bandwidth, Mr. Crab?)
 5. If there are any tools complain about the Wi-Fi regularities when setting up a 10MHz AP,  try setting the channel plan manually by ```echo 0x3E > /proc/net/rtl88x2eu/<wlan>/chan_plan```.
 
-### Is 5MHz Injection Available?
+### Is Injecting in Other Bandwidth Available?
+#### 5MHz
 No. It performs like a fractional RF synthesizer with only a single tone appearing on my SDR receiver.
+#### 40MHz
+It works.   
+Use ```iw``` to set channel & HT40 bandwidth, then set 40MHz in radiotap header (can be done by using ```-B 40``` in wfb-ng, or editing ```/etc/wfb.conf``` in OpenIPC FPV)   
+#### 80MHz
+Wake me up when ```wfb-ng``` supports VHT rates.
 
 ## Set (Unlocked) Channel in procfs  
 The chip's RF synthesizer can work in a bit wider range than regular 5GHz Wi-Fi.  
 On my board, it's 5080MHz ~ 6165MHz. The frequency range may vary depending on different conditions.  
 
 To set the adaptor to some "irregular" frequency, ```cat /proc/net/rtl88x2eu/<wlan0>/monitor_chan_override``` to see usage.  
-e.g. ```ech0 "201 10" > /pr0c/net/rt188x2eu/wlanO/m0nit0r_chan_0verride``` sets the center frequency to 6005MHz, with 10MHz bandwidth.  
 
 I decided to use procfs is that it doesn't need any changes in user-space tools, e.g. iw, hostapd.  
 Of course, you can use this "procfs API" to set regular channels like 149 or 36. Might be useful when developing any Wi-Fi-based broadcast FPV system with frequency hopping and automatic bandwidth.  
