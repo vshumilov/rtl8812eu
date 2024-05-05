@@ -368,6 +368,7 @@ struct center_chs_ent_t center_chs_6g_by_bw[] = {
 static u8 _rtw_get_scch_by_bcch_offset(enum band_type band, u8 cch, u8 bw, u8 offset)
 {
 	u8 t_cch = 0;
+	u8 cch_offset_abs = 0;
 
 	if (bw == CHANNEL_WIDTH_20) {
 		t_cch = cch;
@@ -375,14 +376,16 @@ static u8 _rtw_get_scch_by_bcch_offset(enum band_type band, u8 cch, u8 bw, u8 of
 	}
 
 	if (offset == CHAN_OFFSET_NO_EXT) {
-		rtw_warn_on(1);
+		//rtw_warn_on(1);	// why?
+		t_cch = cch;
 		goto exit;
 	}
 
 	if (band == BAND_ON_24G) {
 		/* 2.4G, 40MHz */
 		if (cch >= 3 && cch <= 11 && bw == CHANNEL_WIDTH_40) {
-			t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 2 : cch - 2;
+			cch_offset_abs = 2;
+			//t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 2 : cch - 2;
 			goto exit;
 		}
 	}
@@ -391,17 +394,20 @@ static u8 _rtw_get_scch_by_bcch_offset(enum band_type band, u8 cch, u8 bw, u8 of
 	else if (band == BAND_ON_5G) {
 		/* 5G, 160MHz */
 		if (cch >= 16 && cch <= 253 && bw == CHANNEL_WIDTH_160) {
-			t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 8 : cch - 8;
+			cch_offset_abs = 8;
+			//t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 8 : cch - 8;
 			goto exit;
 
 		/* 5G, 80MHz */
 		} else if (cch >= 16 && cch <= 253 && bw == CHANNEL_WIDTH_80) {
-			t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 4 : cch - 4;
+			cch_offset_abs = 4;
+			//t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 4 : cch - 4;
 			goto exit;
 
 		/* 5G, 40MHz */
 		} else if (cch >= 16&& cch <= 253 && bw == CHANNEL_WIDTH_40) {
-			t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 2 : cch - 2;
+			cch_offset_abs = 2;
+			//t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 2 : cch - 2;
 			goto exit;
 
 		}
@@ -412,17 +418,20 @@ static u8 _rtw_get_scch_by_bcch_offset(enum band_type band, u8 cch, u8 bw, u8 of
 	else if (band == BAND_ON_6G) {
 		/* 6G, 160MHz */
 		if (cch >= 15 && cch <= 239 && bw == CHANNEL_WIDTH_160) {
-			t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 8 : cch - 8;
+			cch_offset_abs = 8;
+			//t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 8 : cch - 8;
 			goto exit;
 
 		/* 6G, 80MHz */
 		} else if (cch >= 7 && cch <= 247 && bw == CHANNEL_WIDTH_80) {
-			t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 4 : cch - 4;
+			cch_offset_abs = 4;
+			//t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 4 : cch - 4;
 			goto exit;
 
 		/* 6G, 40MHz */
 		} else if (cch >= 3 && cch <= 251 && bw == CHANNEL_WIDTH_40) {
-			t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 2 : cch - 2;
+			cch_offset_abs = 2;
+			//t_cch = (offset == CHAN_OFFSET_LOWER) ? cch + 2 : cch - 2;
 			goto exit;
 
 		}
@@ -432,6 +441,18 @@ static u8 _rtw_get_scch_by_bcch_offset(enum band_type band, u8 cch, u8 bw, u8 of
 	rtw_warn_on(1);
 
 exit:
+	switch (offset) {
+		case CHAN_OFFSET_LOWER:
+			t_cch = cch + cch_offset_abs;
+		break;
+		case CHAN_OFFSET_UPPER:
+			t_cch = cch - cch_offset_abs;
+		break;
+		case CHAN_OFFSET_NO_EXT:
+		default:
+			t_cch = cch;
+		break;
+	}
 	return t_cch;
 }
 
