@@ -526,9 +526,12 @@ sint rtw_fill_radiotap_hdr(_adapter *padapter, struct rx_pkt_attrib *a, u8 *buf)
 		rt_len += 4;
 
 		/* u8 coding, phystat? */
-		hdr_buf[rt_len] = 0;
+		if (moif->u.snif_info.ldpc & 0x01)
+			hdr_buf[rt_len] |= 0x01;
+		else
+			hdr_buf[rt_len] = 0;
 		rt_len += 1;
-
+		
 		/* u8 group_id */
 		hdr_buf[rt_len] = moif->u.snif_info.vht_group_id;
 		rt_len += 1;
