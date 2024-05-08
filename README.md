@@ -84,7 +84,8 @@ No. It performs like a fractional RF synthesizer with only a single tone appeari
 It works.   
 Use ```iw``` to set channel & HT40 bandwidth, then set 40MHz in radiotap header (can be done by using ```-B 40``` in wfb-ng, or editing ```/etc/wfb.conf``` in OpenIPC FPV)   
 #### 80MHz
-Wake me up when ```wfb-ng``` supports VHT rates.
+~~Wake me up when ```wfb-ng``` supports VHT rates.~~  
+OK I did that. See [here](https://github.com/libc0607/wfb-ng/commit/f7c8ea78dd8c8495bb22f184fcfd77152b25798a).  
 
 ## Set (Unlocked) Channel in procfs  
 The chip's RF synthesizer can work in a bit wider range than regular 5GHz Wi-Fi.  
