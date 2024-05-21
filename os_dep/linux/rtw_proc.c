@@ -2714,6 +2714,35 @@ static ssize_t proc_set_rx_chk_limit(struct file *file, const char __user *buffe
 	return count;
 }
 
+static int proc_get_thermal_state(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+        struct dm_struct *p_dm_odm = adapter_to_phydm(padapter);
+        HAL_DATA_TYPE *pHalData = GET_HAL_DATA(padapter);
+
+        u8 rx_cnt = rf_type_to_rf_rx_cnt(pHalData->rf_type);
+        int thermal_value = 0;
+        int thermal_offset = 0;
+        u32 thermal_reg_mask = 0;
+
+        if (IS_8822C_SERIES(GET_HAL_DATA(padapter)->version_id)
+                || IS_8723F_SERIES(GET_HAL_DATA(padapter)->version_id)
+                || IS_8822E_SERIES(GET_HAL_DATA(padapter)->version_id))
+                        thermal_reg_mask = 0x007e;      /*0x42: RF Reg[6:1], 35332(themal K  & bias k & power trim) & 35325(tssi )*/
+        else
+                        thermal_reg_mask = 0xfc00;      /*0x42: RF Reg[15:10]*/
+
+        for(int rf_path = 0; rf_path < rx_cnt; rf_path++)
+        {
+            thermal_value = phy_query_rf_reg(padapter, rf_path, 0x42, thermal_reg_mask);
+            thermal_offset = phydm_get_multi_thermal_offset(p_dm_odm, rf_path);
+            RTW_PRINT_SEL(m, "rf_path: %d, thermal_value: %d, offset: %d, mask=%x\n", rf_path, thermal_value, thermal_offset, thermal_reg_mask);
+        }
+
+        return 0;
+}
+
 #ifdef CONFIG_TX_DUTY
 static int proc_get_txduty_param(struct seq_file *m, void *v)
 {
@@ -2727,6 +2756,7 @@ static int proc_get_txduty_param(struct seq_file *m, void *v)
 	RTW_PRINT_SEL(m, "stage : %d \n", tx_duty_ctrl->stage);
 	RTW_PRINT_SEL(m, "manual mode : %d, dbg : %d\n", tx_duty_ctrl->manual_mode, tx_duty_ctrl->dbg);
 	RTW_PRINT_SEL(m, "pause: %d\n", tx_duty_ctrl->pause);
+
 	return 0;
 }
 
@@ -5903,6 +5933,7 @@ static ssize_t proc_set_amsdu_mode(struct file *file, const char __user *buffer,
 * init/deinit when register/unregister net_device
 */
 const struct rtw_proc_hdl adapter_proc_hdls[] = {
+        RTW_PROC_HDL_SSEQ("thermal_state", proc_get_thermal_state, NULL),
 #if RTW_SEQ_FILE_TEST
 	RTW_PROC_HDL_SEQ("seq_file_test", &seq_file_test, NULL),
 #endif
