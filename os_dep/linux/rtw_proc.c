@@ -2736,7 +2736,7 @@ static int proc_get_thermal_state(struct seq_file *m, void *v)
         for(int rf_path = 0; rf_path < rx_cnt; rf_path++)
         {
             thermal_value = phy_query_rf_reg(padapter, rf_path, 0x42, thermal_reg_mask);
-            thermal_offset = phydm_get_multi_thermal_offset(p_dm_odm, rf_path);
+            thermal_offset = pHalData->eeprom_thermal_meter_multi[rf_path];
             RTW_PRINT_SEL(m, "rf_path: %d, thermal_value: %d, offset: %d, mask=%x\n", rf_path, thermal_value, thermal_offset, thermal_reg_mask);
         }
 
