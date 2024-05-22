@@ -2735,6 +2735,13 @@ static int proc_get_thermal_state(struct seq_file *m, void *v)
 
         for(int rf_path = 0; rf_path < rx_cnt; rf_path++)
         {
+            // need to manually trigger the ADC conversion for latest data
+            phy_set_rf_reg(padapter, rf_path, 0x42, BIT19, 0x1);
+            phy_set_rf_reg(padapter, rf_path, 0x42, BIT19, 0x0);
+            phy_set_rf_reg(padapter, rf_path, 0x42, BIT19, 0x1);
+
+            rtw_usleep_os(15);    // 15us in halrf_get_thermal_8822e()
+            
             thermal_value = phy_query_rf_reg(padapter, rf_path, 0x42, thermal_reg_mask);
             thermal_offset = pHalData->eeprom_thermal_meter_multi[rf_path];
             RTW_PRINT_SEL(m, "rf_path: %d, thermal_value: %d, offset: %d, mask=%x\n", rf_path, thermal_value, thermal_offset, thermal_reg_mask);
