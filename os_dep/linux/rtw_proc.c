@@ -2725,6 +2725,7 @@ static int proc_get_thermal_state(struct seq_file *m, void *v)
         int thermal_value = 0;
         int thermal_offset = 0;
         u32 thermal_reg_mask = 0;
+	int rf_path = 0;
 
         if (IS_8822C_SERIES(GET_HAL_DATA(padapter)->version_id)
                 || IS_8723F_SERIES(GET_HAL_DATA(padapter)->version_id)
@@ -2733,7 +2734,7 @@ static int proc_get_thermal_state(struct seq_file *m, void *v)
         else
                         thermal_reg_mask = 0xfc00;      /*0x42: RF Reg[15:10]*/
 
-        for(int rf_path = 0; rf_path < rx_cnt; rf_path++)
+        for(rf_path = 0; rf_path < rx_cnt; rf_path++)
         {
             // need to manually trigger the ADC conversion for latest data
             phy_set_rf_reg(padapter, rf_path, 0x42, BIT19, 0x1);
