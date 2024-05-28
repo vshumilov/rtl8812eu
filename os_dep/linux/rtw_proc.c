@@ -2714,6 +2714,46 @@ static ssize_t proc_set_rx_chk_limit(struct file *file, const char __user *buffe
 	return count;
 }
 
+static ssize_t proc_set_thermal_state(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct registry_priv *pregpriv = &padapter->registrypriv;
+	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(padapter);
+	char tmp[32];
+	u32 offset_temp;
+
+	if (!padapter)
+		return -EFAULT;
+
+	if (count < 1) {
+		RTW_INFO("Set thermal_state Argument error. \n");
+		return -EFAULT;
+	}
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+		int num = sscanf(tmp, "%u", &offset_temp);
+		if (num < 1)
+			return count;
+	}
+	
+	if (offset_temp > 70) {
+		RTW_INFO("Set thermal_state Argument range error. \n");
+		return -EFAULT;
+	}
+	
+	RTW_INFO("Write to thermal_state offset tempC : %d\n", offset_temp);
+	pHalData->eeprom_thermal_offset_temperature = (u8)offset_temp;
+
+	return count;
+}
+
+
 static int proc_get_thermal_state(struct seq_file *m, void *v)
 {
 	struct net_device *dev = m->private;
@@ -2724,6 +2764,8 @@ static int proc_get_thermal_state(struct seq_file *m, void *v)
         u8 rx_cnt = rf_type_to_rf_rx_cnt(pHalData->rf_type);
         int thermal_value = 0;
         int thermal_offset = 0;
+        int temperature_offset = 32;	// measured value. see comment in commit/5b7a66d for details
+        int temperature = 0; 
         u32 thermal_reg_mask = 0;
 	int rf_path = 0;
 
@@ -2734,6 +2776,9 @@ static int proc_get_thermal_state(struct seq_file *m, void *v)
         else
                         thermal_reg_mask = 0xfc00;      /*0x42: RF Reg[15:10]*/
 
+	temperature_offset = (pHalData->eeprom_thermal_offset_temperature==0)? 
+				temperature_offset: pHalData->eeprom_thermal_offset_temperature;
+	
         for(rf_path = 0; rf_path < rx_cnt; rf_path++)
         {
             // need to manually trigger the ADC conversion for latest data
@@ -2745,7 +2790,8 @@ static int proc_get_thermal_state(struct seq_file *m, void *v)
             
             thermal_value = phy_query_rf_reg(padapter, rf_path, 0x42, thermal_reg_mask);
             thermal_offset = pHalData->eeprom_thermal_meter_multi[rf_path];
-            RTW_PRINT_SEL(m, "rf_path: %d, thermal_value: %d, offset: %d, mask=%x\n", rf_path, thermal_value, thermal_offset, thermal_reg_mask);
+            temperature = (((thermal_value-thermal_offset) *5)/2) + temperature_offset;
+            RTW_PRINT_SEL(m, "rf_path: %d, thermal_value: %d, offset: %d, temperature: %d\n", rf_path, thermal_value, thermal_offset, temperature);
         }
 
         return 0;
@@ -5941,7 +5987,7 @@ static ssize_t proc_set_amsdu_mode(struct file *file, const char __user *buffer,
 * init/deinit when register/unregister net_device
 */
 const struct rtw_proc_hdl adapter_proc_hdls[] = {
-        RTW_PROC_HDL_SSEQ("thermal_state", proc_get_thermal_state, NULL),
+        RTW_PROC_HDL_SSEQ("thermal_state", proc_get_thermal_state, proc_set_thermal_state),
 #if RTW_SEQ_FILE_TEST
 	RTW_PROC_HDL_SEQ("seq_file_test", &seq_file_test, NULL),
 #endif
