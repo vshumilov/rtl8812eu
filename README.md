@@ -81,7 +81,11 @@ According to the module vendor's ambiguous document and the crab's mysterious dr
 
 ### Is Injecting in Other Bandwidth Available?
 #### 5MHz
-No. It performs like a fractional RF synthesizer with only a single tone appearing on my SDR receiver.
+It works by fixing the config in the DAC clock setting register (BB 0x9b4), but it still needs testing so I've put that in another branch.   
+See [this commit](https://github.com/libc0607/rtl88x2eu-20230815/commit/67dbbff1f01b8edd5b532c2a2c6e719452740ff5).  
+The register value is from the RTL8812CU driver, which works well in 5MHz BW. The RTL88x2Cx and RTL88x2Ex share the same internal codename "Jaguar3" so I've just assumed that they have some common register defines, and it works.   
+Tested between RTL8812EU and RTL8812CU([this driver](https://github.com/libc0607/rtl88x2cu-20230728)), both TX and RX.  
+
 #### 40MHz/80MHz
 It works.   
 Use ```iw``` to set channel & HT40/80MHz bandwidth, then set 40MHz or 80MHz(VHT) in radiotap header (can be done by using ```-B``` in wfb-ng)   
