@@ -1,23 +1,13 @@
 # rtl88x2eu-20230815
-Linux Driver for WiFi Adapters that are based on the RTL8812EU and RTL8822EU Chipsets - v5.15.0.1  
-``` rtl88x2EU_rtl88x2CU-VE_WiFi_linux_v5.15.0.1-186-g768722062.20230815_COEX20230616-330a-beta.tar.gz ```  
+Linux Driver for WiFi Adapters that are based on the RTL8812EU and RTL8822EU Chipsets, based on driver ```v5.15.0.1-197```
 
-This branch is mainly focused on FPV. Checkout [commit 690d429](https://github.com/libc0607/rtl88x2eu-20230815/commit/690d429ec272892d5388d744097e3c3cb15dad1b) for the original driver from Realtek, or [commit 5c9355d](https://github.com/libc0607/rtl88x2eu-20230815/commit/5c9355df330a8745a63c06acf1a10203c1d6f804) with build fixes on kernel 6.5.  
-
-I've asked LB-LINK (a Wi-Fi module vendor) for any RTL8812EU driver. Then he sends me this tar.   
-So, it should work with RTL8812EU and RTL8822EU.   
-
-According to the file name, it may work with RTL8812CU or RTL8822CU (if exists). But you should use an in-kernel driver instead.
-
-My personal to-do list: 
-- Figure out how to make the packet injection work correctly (idk if I'm doing it correctly -- needs help) -- generally, it works! but it's not been fully tested and idk how many bugs it has (
-- Test with any OpenIPC camera -- It was reported working on SSC338Q/SSC30KQ and Hi3516/GK7205 (with CONFIG_WIRELESS_EXT enabled)
-- Figure out how to transmit in 5M/10M bandwidth (The feature is claimed to be supported in the module's product page. see [CONFIG_NARROWBAND_SUPPORTING](https://github.com/search?q=repo%3Alibc0607%2Frtl88x2eu-20230815+CONFIG_NARROWBAND_SUPPORTING&type=code) and [hal8822e_fw_10M.c](https://github.com/libc0607/rtl88x2eu-20230815/blob/v5.15.0.1/hal/rtl8822e/hal8822e_fw_10M.c)) -- Only 10MHz bandwidth works well in injection mode
-- Build with dkms
-- Test on more architecture, kernels, and distributions
-- An open-source hardware design using the LB-LINK module, then share it somewhere else -- done, see [here](https://oshwhub.com/libc0607/bl-m8812eu2-demoboard-v1p0)  
+This branch is mainly focused on FPV. Checkout [commit 690d429](https://github.com/libc0607/rtl88x2eu-20230815/commit/690d429ec272892d5388d744097e3c3cb15dad1b) for the original driver from Realtek.  
 
 PRs welcome.
+
+## Hardware 
+BL-M8812EU2 datasheet: [BL-M8812EU2_datasheet_V1.0.1.1_240511.pdf](https://github.com/user-attachments/files/16627775/BL-M8812EU2_datasheet_V1.0.1.1_240511.pdf)  
+Or any adaptor based on RTL8812EU/RTL8822EU should be ok.  
 
 ## Increasing TX Power in Monitor Mode 
 The driver supports changing TX power dynamically with no additional patch needed.  
@@ -27,6 +17,7 @@ The relative TX gain under different settings was measured by my HackRF with the
 The results do tell the difference. However, I don't have a spectrum analyzer, so I don't know the absolute TX power value.   
 
 Be careful when you try these cmds as the adaptor can be VERY HOT. Use a good heat sink and install the antennas properly.  
+Make sure the antenna is connected before transmitting, or you can damage your adaptor's PA. The BL-M8812EU2 has nothing like "antenna lost protection".  
 
 Example: 
 ```
@@ -42,12 +33,8 @@ sudo insmod 8812eu.ko rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 # but when mbm is higher than ~2000 (may different), the PA starts to saturate and the increase becomes smaller
 sudo iw dev wlan0 set txpower fixed <mBm>
 ```
-Tested on my Ubuntu 22.04 VM, kernel 6.5.   
 
-Note: Changing TX power by ```iw``` will not work when injecting with 10MHz BW (see below).  
-You should manually set BW back to 20MHz, set TX power, then set BW back again.  
-
-## 10MHz Bandwidth Transmission
+## Narrowband Transmission
 See the RF spectrum visualized [here](https://www.youtube.com/watch?v=EUj-wSgoY_E) on YouTube  
 
 There's a lot to explore in this crab driver and will update here if something new has been discovered.  
@@ -55,20 +42,37 @@ Please open an issue if you find anything interesting.
 
 So, according to the module vendor's document and my test using a HackRF, that's all I know:   
 
-### Injection
-To transmit packets in monitor mode using packet injection, set ```iw <wlan> set channel <same_channel> 10MHz``` on both air & ground.  
-Then when transmitting in 20MHz bandwidth (e.g. bandwidth=20 in wfb_ng), the packet is actually transmitted in 10MHz bandwidth, which seems like being achieved by simply underclocking the baseband.  
-It's the same on the receiver side, though in which the radiotap header in received packets still indicates a 20MHz bandwidth. 
+### Injection in Different Bandwidth
+#### 5/10MHz Injection
+To transmit packets in monitor mode using packet injection:
+ - Set ```iw <wlan> set channel <same_channel> <5MHz/10MHz>``` on both air & ground
+ - Set the inject packet's radiotap header with any **20MHz bandwidth** modulation (legacy/HT20/VHT20; e.g. ```-B 20``` in ```wfb_tx```) 
+Then the packet is actually transmitted in 5MHz/10MHz bandwidth, which seems like being achieved by simply underclocking the baseband.  
+It's the same on the receiver side, though in which the radiotap header in received packets still indicates a 20MHz bandwidth. You can check that with any SDR receiver or spectrum analyzer.   
 
-But when ```iw``` says ```Devices or Resources Busy (-16)```, check ```iw <wlan> info``` if the ```iw``` recognized the adaptor is in monitor mode.   
-If not, ```iw <wlan> set monitor```, then try setting 10MHz again.  
-
+##### Notes About "Devices or Resources Busy" 
+When ```iw``` says ```Devices or Resources Busy (-16)```, check ```iw <wlan> info``` if the ```iw``` recognized the adaptor is in monitor mode.   
+If not, ```iw <wlan> set monitor```, then try setting 5MHz/10MHz again.  
 That's because:  
 1. The crab driver supports both WEXT and cfg80211 APIs, but it seems that it's not that robust and there's some conflicts exist
 2. the cfg80211 API checks [here](https://github.com/OpenIPC/linux/blob/eb50a943c26845925ff11ccb1651c40fa02c105e/net/wireless/chan.c#L862) if there's any other interface is not in monitor mode
 3. If the monitor mode is set by ```iwconfig```, the process is done by calling the old WEXT APIs, so the cfg80211-based ```iw``` may not get the latest status and think the interface is still in managed mode
 
-### AP/STA
+##### Notes About 5MHz 
+5MHz support is not in the main branch, I've put that in [another branch here](https://github.com/libc0607/rtl88x2eu-20230815/tree/5mhz_bw).   
+It works by fixing the config in the DAC clock setting register (See [this commit](https://github.com/libc0607/rtl88x2eu-20230815/commit/67dbbff1f01b8edd5b532c2a2c6e719452740ff5)), but it still needs testing as there are no register-level documents available and no one knows if those changes will affect the 20/40/80MHz transmission.
+
+The register value is from the RTL8812CU driver, which works well in 5MHz BW. The RTL88x2Cx and RTL88x2Ex share the same internal codename "Jaguar3" so I've just assumed that they have some common register defines, and it works.   
+Tested between RTL8812EU and RTL8812CU ([driver](https://github.com/libc0607/rtl88x2cu-20230728)), both TX and RX.  
+
+##### Note about Changing TX Power in Narrowband Modes
+Changing TX power by ```iw``` will not work when injecting with 5/10MHz BW.  
+You should manually set BW back to 20MHz, set TX power, then set BW back again.  
+
+#### 20/40/80MHz Injection
+Use ```iw``` to set channel & NOHT/HT20/HT40/80MHz bandwidth, then set the correct bandwidth in the radiotap header (can be done by using ```-B``` in wfb-ng)   
+
+### 10MHz BW AP/STA 
 It's currently under testing by a Chinese enthusiast, will update here if he has any progress.  
 According to the module vendor's ambiguous document and the crab's mysterious driver tar with a "_10MHz" suffix:  
 1. Enable ```CONFIG_NARROWBAND_SUPPORTING``` in ```include/hal_ic_cfg.h``` (in ```#ifdef CONFIG_RTL8822E``` section if using RTL8812EU), then ```#define CONFIG_NB_VALUE RTW_NB_CONFIG_WIDTH_10``` below
@@ -77,18 +81,7 @@ According to the module vendor's ambiguous document and the crab's mysterious dr
 4. ```iw``` Set the channel to 10MHz bandwidth
 5. If there are any tools complain about the Wi-Fi regularities when setting up a 10MHz AP,  try setting the channel plan manually by ```echo 0x3E > /proc/net/rtl88x2eu/<wlan>/chan_plan```.
 6. Check the ACK timeout setting below if the range is >\~3km
-7. Check ```/proc/net/rtl88x2eu/<wlan>/rate_ctl``` for manually control of the rate
-
-### Is Injecting in Other Bandwidth Available?
-#### 5MHz
-It works by fixing the config in the DAC clock setting register (BB 0x9b4), but it still needs testing so I've put that in another branch.   
-See [this commit](https://github.com/libc0607/rtl88x2eu-20230815/commit/67dbbff1f01b8edd5b532c2a2c6e719452740ff5).  
-The register value is from the RTL8812CU driver, which works well in 5MHz BW. The RTL88x2Cx and RTL88x2Ex share the same internal codename "Jaguar3" so I've just assumed that they have some common register defines, and it works.   
-Tested between RTL8812EU and RTL8812CU([this driver](https://github.com/libc0607/rtl88x2cu-20230728)), both TX and RX.  
-
-#### 40MHz/80MHz
-It works.   
-Use ```iw``` to set channel & HT40/80MHz bandwidth, then set 40MHz or 80MHz(VHT) in radiotap header (can be done by using ```-B``` in wfb-ng)   
+7. Check ```/proc/net/rtl88x2eu/<wlan>/rate_ctl``` for manually control of the rate if needed. See [@Vito-Swift's tutorial here](https://github.com/Vito-Swift/rtl8814au-ext/blob/main/doc/how_to_do_unicast_rc.md)  
 
 ## Set (Unlocked) Channel in procfs  
 The chip's RF synthesizer can work in a bit wider range than regular 5GHz Wi-Fi.  
@@ -154,5 +147,5 @@ The offset can be tuned by ```echo "<offset>" > /proc/net/rtl88x2eu/<wlan0>/ther
 
 ## Use with OpenIPC  
 See the tutorial [here in OpenIPC Wiki](https://github.com/OpenIPC/wiki/blob/master/en/fpv-bl-m8812eu2-wifi-adaptors.md).  
-Or, download pre-built firmware with this driver from [here](https://github.com/libc0607/openipc-firmware).
+Or, download pre-built firmware with this driver from [here](https://github.com/libc0607/openipc-firmware).  
 
