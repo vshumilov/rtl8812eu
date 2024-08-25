@@ -45,7 +45,7 @@ So, according to the module vendor's document and my test using a HackRF, that's
 ### Injection in Different Bandwidth
 #### 5/10MHz Injection
 To transmit packets in monitor mode using packet injection:
- - Set ```iw <wlan> set channel <same_channel> <5MHz/10MHz>``` on both air & ground
+ - Set ```iw <wlan> set channel <same_channel> <10MHz>``` on both air & ground
  - Set the inject packet's radiotap header with any **20MHz bandwidth** modulation (legacy/HT20/VHT20; e.g. ```-B 20``` in ```wfb_tx```) 
 Then the packet is actually transmitted in 5MHz/10MHz bandwidth, which seems like being achieved by simply underclocking the baseband.  
 It's the same on the receiver side, though in which the radiotap header in received packets still indicates a 20MHz bandwidth. You can check that with any SDR receiver or spectrum analyzer.   
@@ -59,11 +59,13 @@ That's because:
 3. If the monitor mode is set by ```iwconfig```, the process is done by calling the old WEXT APIs, so the cfg80211-based ```iw``` may not get the latest status and think the interface is still in managed mode
 
 ##### Notes About 5MHz 
-5MHz support is not in the main branch, I've put that in [another branch here](https://github.com/libc0607/rtl88x2eu-20230815/tree/5mhz_bw).   
-It works by fixing the config in the DAC clock setting register (See [this commit](https://github.com/libc0607/rtl88x2eu-20230815/commit/67dbbff1f01b8edd5b532c2a2c6e719452740ff5)), but it still needs testing as there are no register-level documents available and no one knows if those changes will affect the 20/40/80MHz transmission.
-
+EXPERIMENTAL 5MHz support is not in the main branch, I've put that in [another branch here](https://github.com/libc0607/rtl88x2eu-20230815/tree/5mhz_bw).   
+It works by fixing the config in the DAC clock setting register (See [this commit](https://github.com/libc0607/rtl88x2eu-20230815/commit/67dbbff1f01b8edd5b532c2a2c6e719452740ff5)), but it still needs testing as there are no register-level documents available and no one knows if those changes will affect the 20/40/80MHz transmission.  
+ 
 The register value is from the RTL8812CU driver, which works well in 5MHz BW. The RTL88x2Cx and RTL88x2Ex share the same internal codename "Jaguar3" so I've just assumed that they have some common register defines, and it works.   
 Tested between RTL8812EU and RTL8812CU ([driver](https://github.com/libc0607/rtl88x2cu-20230728)), both TX and RX.  
+
+**Update**:  Some leakage (mirror?) can be observed in the 5MHz mode, and I have no idea how to configure the DAC clock properly as there are no even definitions in .h files. So, 5MHz is not recommended. However, I'll keep that branch for further research. 
 
 ##### Note about Changing TX Power in Narrowband Modes
 Changing TX power by ```iw``` will not work when injecting with 5/10MHz BW.  
@@ -144,6 +146,12 @@ Note: This value is not accurate enough. The LSB of its ADC only represents 2.5K
 However, it can be used to estimate the status of the chip, "cool/warm/hot/smoked/crispy".  
 See [PR #4](https://github.com/libc0607/rtl88x2eu-20230815/pull/4) and [commit/5b7a66d](https://github.com/libc0607/rtl88x2eu-20230815/commit/5b7a66d3b1c7097a02247f91253993a7027e40a6#comments) for more details.  
 The offset can be tuned by ```echo "<offset>" > /proc/net/rtl88x2eu/<wlan0>/thermal_state```. By default, it's ```32```, based on my measurement.  
+
+## TX NPATH setting  
+Realtek didn't say anything about the feature, but IMO it should be the Cyclic Shift Diversity (CSD) feature (A 'sine wave' can be seen on top of the OFDM spectrum when enabled).  
+Only works when 1. injecting legacy rates, or 2. injecting in MCS rates with only 1 spatial stream enabled and STBC disabled.  
+Use ```rtw_tx_npath_enable=1``` when ```insmod``` to enable the feature. You can see a significant input current difference.  
+Like the STBC, it's another transmit diversity technique. Need more tests to tell the difference in the FPV scenario.  
 
 ## Use with OpenIPC  
 See the tutorial [here in OpenIPC Wiki](https://github.com/OpenIPC/wiki/blob/master/en/fpv-bl-m8812eu2-wifi-adaptors.md).  
