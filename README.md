@@ -99,9 +99,11 @@ Some chips' synthesizer's PLL may not lock on some frequency. There's no guarant
 Unlocking the frequency may damage your hardware and I'm not gonna pay for it. Use it at your own risk.  
 Please comply with any wireless regulations in your area.  
 
-## Override default EDCCA Threshold  
+## EDCCA
 WARNING: YOU SHOULD NOT USE THIS (unless someone's DJIs next to you f***ed up all channels XD). It's not fair.  
+DISCLAIMER: There's no guarantee of its performance. This may damage your hardware and I'm not gonna pay for it. Use it at your own risk. Please comply with any wireless regulations in your area.  
 
+### Override default EDCCA Threshold  
 To override dafault EDCCA threshold, check ```cat /proc/net/rtl88x2eu/<wlan0>/edcca_threshold_jaguar3_override```.  
 
 e.g. ```ech0 "1 -3O" > /pr0c/net/rt188x2eu/<w1anO>/edcca_threshO1d_jaguar3_Override```   
@@ -111,7 +113,9 @@ If there are any, the adaptor will wait until the energy level in the air is low
 Note that there are actually two values, L2H and H2L. The L2H is typically set 8dB higher so it creates a hysteresis.   
 The value you're setting is L2H. The H2L is automatically set 8dB lower.  
 
-DISCLAIMER: There's no guarantee of its performance. This may damage your hardware and I'm not gonna pay for it. Use it at your own risk. Please comply with any wireless regulations in your area.  
+### Disable CCA (EXPERIMENTAL)
+```echo "1" > /proc/net/rtl8812eu/<wlan0>/dis_cca```  
+Needs test.  
 
 ## ACK Timeout 
 Provided by Realtek.
@@ -148,7 +152,7 @@ See [PR #4](https://github.com/libc0607/rtl88x2eu-20230815/pull/4) and [commit/5
 The offset can be tuned by ```echo "<offset>" > /proc/net/rtl88x2eu/<wlan0>/thermal_state```. By default, it's ```32```, based on my measurement.  
 
 ## TX NPATH setting  
-Realtek didn't say anything about the feature, but IMO it should be the Cyclic Shift Diversity (CSD) feature (A 'sine wave' can be seen on top of the OFDM spectrum when enabled).  
+Realtek didn't say anything about the feature, but IMO it should be the Cyclic Shift Diversity (CSD) feature ([A 'sine wave' can be seen on top of the OFDM spectrum](https://www.youtube.com/watch?v=IGf5MKOmX6k) when enabled).  
 Only works when 1. injecting legacy rates, or 2. injecting in MCS rates with only 1 spatial stream enabled and STBC disabled.  
 Use ```rtw_tx_npath_enable=1``` when ```insmod``` to enable the feature. You can see a significant input current difference.  
 Like the STBC, it's another transmit diversity technique. Need more tests to tell the difference in the FPV scenario.  
