@@ -157,7 +157,16 @@ Only works when 1. injecting legacy rates, or 2. injecting in MCS rates with onl
 Use ```rtw_tx_npath_enable=1``` when ```insmod``` to enable the feature. You can see a significant input current difference.  
 Like the STBC, it's another transmit diversity technique. Need more tests to tell the difference in the FPV scenario.  
 
-## Use with OpenIPC  
-See the tutorial [here in OpenIPC Wiki](https://github.com/OpenIPC/wiki/blob/master/en/fpv-bl-m8812eu2-wifi-adaptors.md).  
-Or, download pre-built firmware with this driver from [here](https://github.com/libc0607/openipc-firmware).  
+## Generating Single Tone  
+To generate a single tone at the carrier frequency, 
+ 1. Set monitor mode & any channel, e.g. ```iwconfig wlan0 mode monitor channel 52``` (5260 MHz)
+ 2. ```echo "1 4" > /proc/net/rtl88x2eu/<wlan0>/single_tone```, in which ```<EN:0/1>```, ```<RF_PATH:0(A)/1(B)/4(AB)>```
+ 3. Remember to set ```EN``` back to ```0``` before any normal operation
 
+Useful when generating any signal without PAPR matters.  
+![image](https://github.com/user-attachments/assets/e664bbf1-d2d1-4648-b28a-ec3d1c199009)  
+
+## Use with OpenIPC  
+The driver has been integrated into the default FPV firmware for SSC30KQ, SSC338Q, and SSC377DE since [this commit](https://github.com/OpenIPC/firmware/commit/64228b686002b2fd8fd2cbf722a1a6cb7aad9650).  
+For other platforms, see the tutorial [here in OpenIPC Wiki](https://github.com/OpenIPC/wiki/blob/master/en/fpv-bl-m8812eu2-wifi-adaptors.md).  
+Or, download pre-built firmware with this driver from [here](https://github.com/libc0607/openipc-firmware).  
