@@ -6004,15 +6004,15 @@ static int proc_get_dis_cca(struct seq_file *m, void *v)
 
 static ssize_t proc_set_dis_cca(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
 {
+	char tmp[32];
+	u32 en;
+	
 	struct net_device *dev = data;
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct registry_priv	*pregpriv = &padapter->registrypriv;
 	struct dm_struct *dm;
 	dm = adapter_to_phydm(padapter);
 	
-	char tmp[32];
-	u32 en;
-
 	if (!padapter)
 		return -EFAULT;
 		
