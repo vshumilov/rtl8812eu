@@ -6094,8 +6094,6 @@ static ssize_t proc_set_single_tone(struct file *file, const char __user *buffer
 	struct registry_priv	*pregpriv = &padapter->registrypriv;
 	struct dm_struct *dm;
 	dm = adapter_to_phydm(padapter);
-	
-
 
 	if (!padapter)
 		return -EFAULT;
